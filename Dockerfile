@@ -27,11 +27,11 @@ COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create an user for the app.
-ARG USER=docker
-ARG PASSWORD=docker
-RUN useradd --shell /bin/bash --groups sudo ${USER}
-RUN echo ${USER}:${PASSWORD} | chpasswd
-USER ${USER}
+# ARG USER=docker
+# ARG PASSWORD=docker
+# RUN useradd --shell /bin/bash --groups sudo ${USER}
+# RUN echo ${USER}:${PASSWORD} | chpasswd
+# USER ${USER}
 
 WORKDIR /Major_Project
 
