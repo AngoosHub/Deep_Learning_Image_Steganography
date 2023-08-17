@@ -15,10 +15,10 @@ RUN apt install -y --no-install-recommends \
     python3.9 \
     python3-pip \
     python3-setuptools \
-    locales \
-    sudo \
-    localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-ENV LANG en_US.utf8
+    # locales \
+    sudo
+#     localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+# ENV LANG en_US.utf8
 
 RUN pip3 -q install pip --upgrade
 
