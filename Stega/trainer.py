@@ -9,6 +9,7 @@ from models import *
 import utils
 import numpy as np
 import wandb
+import random
 
 
 # from collections import OrderedDict
@@ -44,21 +45,20 @@ NUM_CPU = 1
 if os.cpu_count() > 35:
     NUM_CPU = 10 # 10 used for each train, val, and test dataloader.
 
+# Set torch seed
+torch.manual_seed(42)
+
 
 def train(load_model=False, load_path=""):
 
     batch_idx = 1
     epoch_idx = 1
 
-    # Set torch seed
-    torch.manual_seed(42)
-
     # Set device type
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
     data_path = Path("data/")
-    print(os.getcwd())
     if not os.path.isdir('data/'):
         data_path = Path("../data/")
     train_dir = data_path / "train"
@@ -235,7 +235,7 @@ def get_val_dataloader(val_dir, batch_size, num_cpu, normalize):
     val_dataloader = DataLoader(dataset=val_dataset, 
                                 batch_size=batch_size, 
                                 num_workers=num_cpu, 
-                                shuffle=False, # val not shuffled
+                                shuffle=True, # Controls shuffle on valset (random is seeded)
                                 pin_memory=True,
                                 drop_last=True)
     
@@ -263,8 +263,10 @@ def get_test_dataloader(test_dir, batch_size, num_cpu, normalize):
     
     test_dataloader = DataLoader(dataset=test_dataset, 
                                  batch_size=batch_size, 
-                                 num_workers=num_cpu, 
-                                 shuffle=False, # val not shuffled
+                                 num_workers=num_cpu,
+                                 worker_init_fn=seed_worker,
+                                 generator=g,
+                                 shuffle=True, # Controls shuffle on testset (random is seeded)
                                  pin_memory=True,
                                  drop_last=True)
     
@@ -558,15 +560,19 @@ def save_checkpoint(model, optimizer, device, epoch_idx, batch_idx):
 
 
             
-            
-            
+# Seed Pytorch dataloader random seed for workers.
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
+g = torch.Generator()
+g.manual_seed(0)
 
 if __name__ == "__main__":
 
     global WANDB_VAR
     data_path = Path("data/")
-    print(os.getcwd())
     if not os.path.isdir('data/'):
         data_path = Path("../data/")
     test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1, NORMALIZE)
