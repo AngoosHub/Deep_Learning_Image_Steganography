@@ -58,8 +58,9 @@ def train(load_model=False, load_path=""):
     print(f"Device: {device}")
 
     data_path = Path("data/")
+    print(os.getcwd())
     if not os.path.isdir('data/'):
-        data_path = Path("Deep_Learning_Image_Steganography/data/")
+        data_path = Path("../data/")
     train_dir = data_path / "train"
     val_dir = data_path / "val"
     test_dir = data_path / "test"
