@@ -2,7 +2,8 @@ services:
   ml_project:
     container_name: ml_stega_project
     build: .
-    runtime: nvidia    
+    runtime: nvidia  
+    shm_size: '16gb'  
     environment:
       - NVIDIA_VISIBLE_DEVICES=0,3  # or device number (e.g. 0) to allow a single gpu
     ports:
