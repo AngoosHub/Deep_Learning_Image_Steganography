@@ -2,6 +2,7 @@
 import unittest
 import os
 import torch
+from torch.utils.data import DataLoader
 from pathlib import Path
 from dataset_builder import DatasetBuilder
 from models import *
@@ -165,8 +166,6 @@ class TestRevealNetwork(unittest.TestCase):
         self.assertTupleEqual(tensor_final.size(), (1, 3, 224, 224))
         self.assertTrue(tensor_final.requires_grad)
 
-'''
-
 
 class TestCombinedNetwork(unittest.TestCase):
 
@@ -201,7 +200,7 @@ class TestCombinedNetwork(unittest.TestCase):
         self.assertTrue(modified_cover.requires_grad)
         self.assertTrue(recovered_secret.requires_grad)
 
-
+'''
 
 class TestTrainer(unittest.TestCase):
 
@@ -217,24 +216,47 @@ class TestTrainer(unittest.TestCase):
         self.val_dir = self.data_path / "tempval"
         self.test_dir = self.data_path / "temptest"
 
+        self.my_custom_loss = MSE_and_SSIM_loss()
+
     def test_get_train_dataloader(self):
 
-        train_dataloader = get_train_dataloader(self.train_dir, BATCH_SIZE, NUM_CPU, NORMALIZE)
+        train_dataloader = get_train_dataloader(self.train_dir, 2, NUM_CPU, NORMALIZE)
 
-        # prepped_secrets, prepped_data, modified_cover, modified_cover_noisy, recovered_secret = self.combined_net.forward_helper(self.cover_tensor, self.secret_tensor, 
-        #                                                                                                                          is_unittest=True)
+        img_batch, label_batch = next(iter(train_dataloader))
+        img_cover, label_single = img_batch[0].unsqueeze(dim=0), label_batch[0]
 
-        # self.assertTupleEqual(prepped_secrets.size(), (1, 150, 224, 224))
-        # self.assertTupleEqual(prepped_data.size(), (1, 153, 224, 224))
-        # self.assertTupleEqual(modified_cover.size(), (1, 3, 224, 224))
-        # self.assertTupleEqual(modified_cover_noisy.size(), (1, 3, 224, 224))
-        # self.assertTupleEqual(recovered_secret.size(), (1, 3, 224, 224))
+        self.assertTrue(type(train_dataloader) is DataLoader)
+        self.assertTrue(type(img_batch) is torch.Tensor)
+        self.assertTrue(type(img_cover) is torch.Tensor)
+    
+    def test_get_val_dataloader(self):
 
-        # self.assertTrue(prepped_secrets.requires_grad)
-        # self.assertTrue(prepped_data.requires_grad)
-        # self.assertTrue(modified_cover.requires_grad)
-        # self.assertTrue(modified_cover_noisy.requires_grad)
-        # self.assertTrue(recovered_secret.requires_grad)
+        val_dataloader = get_val_dataloader(self.val_dir, 2, NUM_CPU, NORMALIZE)
+
+        img_batch, label_batch = next(iter(val_dataloader))
+        img_cover, label_single = img_batch[0].unsqueeze(dim=0), label_batch[0]
+
+        self.assertTrue(type(val_dataloader) is DataLoader)
+        self.assertTrue(type(img_batch) is torch.Tensor)
+        self.assertTrue(type(img_cover) is torch.Tensor)
+
+    def test_get_test_dataloader(self):
+
+        test_dataloader = get_test_dataloader(self.test_dir, 2, NUM_CPU, NORMALIZE)
+
+        img_batch, label_batch = next(iter(test_dataloader))
+        img_cover, label_single = img_batch[0].unsqueeze(dim=0), label_batch[0]
+
+        self.assertTrue(type(test_dataloader) is DataLoader)
+        self.assertTrue(type(img_batch) is torch.Tensor)
+        self.assertTrue(type(img_cover) is torch.Tensor)
+
+
+    # def test_MSE_loss():
+
+    # def test_SSIM_loss():
+
+    # def test_combined_loss():
 
 
 

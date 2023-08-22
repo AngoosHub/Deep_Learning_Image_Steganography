@@ -7,10 +7,13 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0,3  # or device number (e.g. 0) to allow a single gpu
     ports:
       - "60000:9092"  # port for access
+    # volumes:
+    #   - .:/Major_Project/Deep_Learning_Image_Steganography
+    #   - ../imagenet/ILSVRC/Data/DET:/Major_Project/data
     volumes:
-      - /mnt/scratch/zangoos/Deep_Learning_Image_Steganography:/Major_Project/Deep_Learning_Image_Steganography
-      - /mnt/wato-drive2/zangoos/imagenet:/Major_Project/data
-
-# volumes:
-#   /mnt/scratch/zangoos/Deep_Learning_Image_Steganography:
-#   /mnt/wato-drive2/zangoos:
+      - type: bind
+        source: /mnt/scratch/zangoos/ml_project/Deep_Learning_Image_Steganography
+        target: /Major_Project/Deep_Learning_Image_Steganography
+      - type: bind
+        source: /mnt/scratch/zangoos/imagenet/ILSVRC/Data/DET
+        target: /Major_Project/data

@@ -25,19 +25,24 @@ from ignite.contrib.metrics import *
 
 SKIP_WANDB = False # True to skip wandb login and save time in testing
 SAVE_EPOCH_PROGRESS = True # False to to skip saving models when testing
+SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = False # True to skip saving image showing early learning progress
+# WANDB_VAR
 
 LEARNING_RATE = 0.001 # 0.0001 slower
 BATCH_SIZE = 8 # above 16 runs out of memory
 EPOCHS = 1 # 3 Epochs takes about 7 hours
 BETA = 0.75
+RESUME_EPOCH = 1 # Set to resume checkpoint's epoch number (ignored if = 1)
+RESUME_PATH = "saved_models/latest/model.pth" # Path to model.pth file to resume training
 
 # Normalize input images using imageNet mean and standard deviation
 NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 # Set cpu number for loading data
-# num_cpu = max(os.cpu_count() - 1, 1)
 NUM_CPU = 1
+if os.cpu_count() > 35:
+    NUM_CPU = 10 # 10 used for each train, val, and test dataloader.
 
 
 def train(load_model=False, load_path=""):
@@ -63,12 +68,16 @@ def train(load_model=False, load_path=""):
     # train_dir = current_working_dir / "train"
     # val_dir = current_working_dir / "val"
 
+    # Resume training from checkpoint
+    if RESUME_EPOCH > 1:
+        resume_epoch = RESUME_EPOCH - 1
+        # resume(model, RESUME_PATH)
 
     start_time = time.perf_counter()
 
     train_dataloader = get_train_dataloader(train_dir, BATCH_SIZE, NUM_CPU, NORMALIZE)
     val_dataloader = get_val_dataloader(val_dir, BATCH_SIZE, NUM_CPU, NORMALIZE)
-    test_dataloader = get_test_dataloader(test_dir, BATCH_SIZE, NUM_CPU, NORMALIZE)
+    test_dataloader = get_test_dataloader(test_dir, BATCH_SIZE, 1, NORMALIZE)
 
 
     my_custom_loss = MSE_and_SSIM_loss()
@@ -89,8 +98,8 @@ def train(load_model=False, load_path=""):
         # watch our model and custom loss function
         wandb.watch(test_model, my_custom_loss, log="all", log_freq=50)
 
-    for epoch_idx in range(EPOCHS+1):
-        train_loss_epoch, cover_loss_epoch, secret_loss_epoch, cover_loss_mse_epoch, secret_loss_mse_epoch, cover_loss_ssim_epoch, secret_loss_ssim_epoch = train_step(
+    for n in range(EPOCHS):
+        train_step(
             model=test_model,
             dataloader=train_dataloader,
             loss=my_custom_loss,
@@ -102,32 +111,44 @@ def train(load_model=False, load_path=""):
             epoch_total=EPOCHS,
             val_dataloader=val_dataloader)
         
-
-        train_loss = np.mean(train_loss_epoch)
-        cover_loss = np.mean(cover_loss_epoch)
-        secret_loss = np.mean(secret_loss_epoch)
-        cover_loss_mse = np.mean(cover_loss_mse_epoch)
-        secret_loss_mse = np.mean(secret_loss_mse_epoch)
-        cover_loss_ssim = np.mean(cover_loss_ssim_epoch)
-        secret_loss_ssim = np.mean(secret_loss_ssim_epoch)
-
-        # wandb.log({"acc": acc, "loss": loss})
-
-        wandb.log({'train/epoch': batch_idx,
-                'train/loss': train_loss,
-                'train/cover_loss': cover_loss,
-                'train/secret_loss': secret_loss,
-                'train/cover_mse': cover_loss_mse,
-                'train/secret_mse': secret_loss_mse,
-                'train/cover_ssim': cover_loss_ssim,
-                'train/secret_ssim': secret_loss_ssim})
+        # Uncomment for wandb logging of average epoch error.
+        # train_loss_epoch, cover_loss_epoch, secret_loss_epoch, cover_loss_mse_epoch, secret_loss_mse_epoch, cover_loss_ssim_epoch, secret_loss_ssim_epoch = train_step(
+        #     model=test_model,
+        #     dataloader=train_dataloader,
+        #     loss=my_custom_loss,
+        #     optimizer=optimizer,
+        #     device=device,
+        #     batch_size=BATCH_SIZE,
+        #     batch_idx=batch_idx,
+        #     epoch_idx=epoch_idx,
+        #     epoch_total=EPOCHS,
+        #     val_dataloader=val_dataloader)
         
-        print(
-            f"Epoch: [{epoch_idx}/{EPOCHS}] | "
-            f"train_loss: {np.mean(train_loss_epoch):.4f} | "
-            f"cover_loss: {np.mean(cover_loss_epoch):.4f} | "
-            f"secret_loss: {np.mean(secret_loss_epoch):.4f}"
-        )
+        # Uncomment for wandb logging of average epoch error.
+        # train_loss = np.mean(train_loss_epoch)
+        # cover_loss = np.mean(cover_loss_epoch)
+        # secret_loss = np.mean(secret_loss_epoch)
+        # cover_loss_mse = np.mean(cover_loss_mse_epoch)
+        # secret_loss_mse = np.mean(secret_loss_mse_epoch)
+        # cover_loss_ssim = np.mean(cover_loss_ssim_epoch)
+        # secret_loss_ssim = np.mean(secret_loss_ssim_epoch)
+
+        # Uncomment for wandb logging of average epoch error.
+        # wandb.log({'train/epoch': batch_idx,
+        #         'train/loss': train_loss,
+        #         'train/cover_loss': cover_loss,
+        #         'train/secret_loss': secret_loss,
+        #         'train/cover_mse': cover_loss_mse,
+        #         'train/secret_mse': secret_loss_mse,
+        #         'train/cover_ssim': cover_loss_ssim,
+        #         'train/secret_ssim': secret_loss_ssim})
+        
+        # print(
+        #     f"Epoch: [{epoch_idx}/{EPOCHS}] | "
+        #     f"train_loss: {np.mean(train_loss_epoch):.4f} | "
+        #     f"cover_loss: {np.mean(cover_loss_epoch):.4f} | "
+        #     f"secret_loss: {np.mean(secret_loss_epoch):.4f}"
+        # )
 
         # Save checkpoint after each epoch
         if SAVE_EPOCH_PROGRESS:
@@ -290,10 +311,6 @@ def test_plot_single_batch(img_cover, img_secret, test_model, device):
         wandb.log({"Image": fig})
 
 
-test_plot_dataloader = get_test_dataloader((Path("data/") / "temptest"), 2, 0, NORMALIZE)
-img_cover, img_secret = get_single_batch_into_image(test_plot_dataloader)
-
-
 def custom_loss(cover, secret, cover_original, secret_original):
 
     cover_loss = torch.nn.functional.mse_loss(input=cover, target=cover_original)
@@ -411,13 +428,14 @@ def train_step(model: torch.nn.Module,
         # print(f"Custom Loss 1: \n"
         #   f"Combined: {combined_loss_1}, Cover: {c_loss_1}, Secret: {s_loss_1}")
 
-        train_loss.append(combined_loss.item()) # loss.item() to get number from 1 element tensor
-        cover_loss.append(c_loss.item())
-        secret_loss.append(s_loss.item())
-        cover_loss_mse.append(c_mse.item())
-        secret_loss_mse.append(s_mse.item())
-        cover_loss_ssim.append(1-c_ssim.metrics['ssim'])
-        secret_loss_ssim.append(1-s_ssim.metrics['ssim'])
+        # Uncomment for wandb logging of average epoch error.
+        # train_loss.append(combined_loss.item()) # loss.item() to get number from 1 element tensor
+        # cover_loss.append(c_loss.item())
+        # secret_loss.append(s_loss.item())
+        # cover_loss_mse.append(c_mse.item())
+        # secret_loss_mse.append(s_mse.item())
+        # cover_loss_ssim.append(1-c_ssim.metrics['ssim'])
+        # secret_loss_ssim.append(1-s_ssim.metrics['ssim'])
 
         # Backpropagate and optimize
         combined_loss.backward()
@@ -430,14 +448,15 @@ def train_step(model: torch.nn.Module,
 
         # log progress every 50 batches
         if not SKIP_WANDB and batch_idx % 50 == 0:
-            wandb.log({'train/batch': batch_idx,
+            wandb.log({#'train/batch': batch_idx,
                     'train/batch_loss': combined_loss.item(),
                     'train/batch_cover_loss': c_loss.item(),
                     'train/batch_secret_loss': s_loss.item(),
-                    'train/batch_cover_mse': c_mse.item(),
-                    'train/batch_secret_mse': s_mse.item(),
-                    'train/batch_cover_ssim': 1-c_ssim.metrics['ssim'],
-                    'train/batch_secret_ssim': 1-s_ssim.metrics['ssim']})
+                    # 'train/batch_cover_mse': c_mse.item(),
+                    # 'train/batch_secret_mse': s_mse.item(),
+                    # 'train/batch_cover_ssim': 1-c_ssim.metrics['ssim'],
+                    # 'train/batch_secret_ssim': 1-s_ssim.metrics['ssim']
+                    })
             
             validation_step(model, 
                             val_dataloader, 
@@ -449,8 +468,10 @@ def train_step(model: torch.nn.Module,
         
         batch_idx += 1
 
+        break
 
-    return train_loss, cover_loss, secret_loss, cover_loss_mse,secret_loss_mse, cover_loss_ssim, secret_loss_ssim
+    # Uncomment for wandb logging of average epoch error.
+    # return train_loss, cover_loss, secret_loss, cover_loss_mse,secret_loss_mse, cover_loss_ssim, secret_loss_ssim
 
 
 def validation_step(model: torch.nn.Module, 
@@ -473,14 +494,20 @@ def validation_step(model: torch.nn.Module,
     
     # log progress every 50 batches
         if not SKIP_WANDB and batch_idx % 50 == 0:
-            wandb.log({'train/batch': batch_idx,
+            wandb.log({#'train/batch': batch_idx,
                     'train/batch_loss_val': combined_loss.item(),
                     'train/batch_cover_loss_val': c_loss.item(),
                     'train/batch_secret_loss_val': s_loss.item(),
-                    'train/batch_cover_mse_val': c_mse.item(),
-                    'train/batch_secret_mse_val': s_mse.item(),
-                    'train/batch_cover_ssim_val': 1-c_ssim.metrics['ssim'],
-                    'train/batch_secret_ssim_val': 1-s_ssim.metrics['ssim']})
+                    # 'train/batch_cover_mse_val': c_mse.item(),
+                    # 'train/batch_secret_mse_val': s_mse.item(),
+                    # 'train/batch_cover_ssim_val': 1-c_ssim.metrics['ssim'],
+                    # 'train/batch_secret_ssim_val': 1-s_ssim.metrics['ssim']
+                    })
+            
+            if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
+                if (batch_idx % 100 == 0 and batch_idx <= 1000):
+                    # Try plotting a batch of image fed to model.
+                    test_plot_single_batch(img_cover, img_secret, model, device)
 
     # Turn training back on after eval finished
     model.train()
@@ -508,13 +535,39 @@ def save_checkpoint(model, optimizer, device, epoch_idx, batch_idx):
 
             utils.save_model(model=save_state, model_name=model_name)
 
-        # Try plotting a batch of image fed to model.
-        test_plot_single_batch(img_cover, img_secret, model, device)
+            # Try plotting a batch of image fed to model.
+            global img_cover, img_secret
+            test_plot_single_batch(img_cover, img_secret, model, device)
+
+            global WANDB_VAR
+            if WANDB_VAR != False:
+                artifact_path = Path("saved_models/latest")
+                if not artifact_path.is_dir():
+                    artifact_path.mkdir(parents=True)
+                
+                latest_model = "latest/model.pth"
+                latest_model_path = Path("saved_models") / latest_model
+                utils.save_model(model=save_state, model_name=latest_model)
+                artifact = wandb.Artifact(name='model', type='model')
+                artifact.add_file(latest_model_path)
+                WANDB_VAR.log_artifact(artifact)
+
+
+
+            
+            
+            
 
 
 if __name__ == "__main__":
 
+    global WANDB_VAR
+    test_plot_dataloader = get_test_dataloader((Path("data/") / "test"), 2, 1, NORMALIZE)
+    global img_cover, img_secret
+    img_cover, img_secret = get_single_batch_into_image(test_plot_dataloader)
+
     if SKIP_WANDB:
+        WANDB_VAR = False
         train()
     else:
         # start a new wandb run to track this script, # set the wandb project where this run will be logged
@@ -524,7 +577,8 @@ if __name__ == "__main__":
             "dataset": "ImageNet",
             "epochs": EPOCHS,
             "batch_size": BATCH_SIZE,
-            }):
+            }) as wandb_run:
             # load_path = Path("saved_models") / "20230707-131247" / "Test_Model_Epoch_5_FINAL.pth"
             # train(load_model=True, load_path=load_path)
+            WANDB_VAR = wandb_run
             train()

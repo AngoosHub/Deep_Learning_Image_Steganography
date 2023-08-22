@@ -26,12 +26,18 @@ COPY requirements.txt requirements.txt
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+ENV WANDB_API_KEY="b49c726803eb9a4b39641921189be7d04cc3f9e1"
+RUN pip install wandb --upgrade
+
 # Create an user for the app.
 # ARG USER=docker
 # ARG PASSWORD=docker
 # RUN useradd --shell /bin/bash --groups sudo ${USER}
 # RUN echo ${USER}:${PASSWORD} | chpasswd
 # USER ${USER}
+
+# root user for dev branch
+USER root
 
 WORKDIR /Major_Project
 
