@@ -565,7 +565,11 @@ def save_checkpoint(model, optimizer, device, epoch_idx, batch_idx):
 if __name__ == "__main__":
 
     global WANDB_VAR
-    test_plot_dataloader = get_test_dataloader((Path("data/") / "test"), 2, 1, NORMALIZE)
+    data_path = Path("data/")
+    print(os.getcwd())
+    if not os.path.isdir('data/'):
+        data_path = Path("../data/")
+    test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1, NORMALIZE)
     global img_cover, img_secret
     img_cover, img_secret = get_single_batch_into_image(test_plot_dataloader)
 
