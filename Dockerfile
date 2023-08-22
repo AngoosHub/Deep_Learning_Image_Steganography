@@ -42,5 +42,5 @@ USER root
 WORKDIR /Major_Project
 
 
-# CMD ["python3", "Stega/trainer.py"]
+CMD ["python3", "Stega/trainer.py"]
 EXPOSE 9092
