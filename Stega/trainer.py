@@ -266,7 +266,7 @@ def get_test_dataloader(test_dir, batch_size, num_cpu, normalize):
                                  num_workers=num_cpu,
                                  worker_init_fn=seed_worker,
                                  generator=g,
-                                 shuffle=True, # Controls shuffle on testset (random is seeded)
+                                 shuffle=False, # Controls shuffle on testset (random is seeded)
                                  pin_memory=True,
                                  drop_last=True)
     
