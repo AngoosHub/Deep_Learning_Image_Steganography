@@ -615,13 +615,13 @@ def set_default_cover_secret_images():
     p2_cover = relative_to_assets_page2("image_1.png")
 
     with Image.open(p1_cover) as img:
-        page1_cover = img
+        page1_cover = img.convert('RGB')
 
     with Image.open(p1_secret) as img:
-        page1_secret = img
+        page1_secret = img.convert('RGB')
 
     with Image.open(p2_cover) as img:
-        page2_cover = img
+        page2_cover = img.convert('RGB')
 
 
 def page1_cover_secret_image_picker(canvas, image_on_canvas, self, is_cover):
