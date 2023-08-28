@@ -33,13 +33,14 @@ class PrepareNetwork(nn.Module):
                       padding="same"), # "same" (output has same shape as input)
                       # padding=1), # padding of 1 to maintain same shape of 224x224
             nn.BatchNorm2d(out_channels),
-            nn.PReLU(out_channels), # add non-linearity activation function.
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
+            nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
@@ -146,7 +147,7 @@ class PrepareNetwork(nn.Module):
             #           stride=1,
             #           padding="same"),
             #           # padding=1),
-            # nn.PReLU(),
+            # nn.#PReLU(),
         )
         # Conv block takes 150 input channels with 4x4 kernels, outputs 50 channels. (2 layers due to 4x4 kernel imbalanced padding)
         self.conv_block_4x4_concat = nn.Sequential(
@@ -183,7 +184,7 @@ class PrepareNetwork(nn.Module):
             #           stride=1,
             #           padding="same"),
             #           # padding=1),
-            # nn.PReLU(),
+            # nn.#PReLU(),
         )
     
     def forward(self, input_tensor: torch.Tensor):
@@ -262,7 +263,7 @@ class HidingNetwork(nn.Module):
                       padding="same"), # "same" (output has same shape as input)
                       # padding=1), # padding of 1 to maintain same shape of 224x224
             nn.BatchNorm2d(out_channels),
-            nn.PReLU(out_channels), # add non-linearity activation function.
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=3,
@@ -508,7 +509,7 @@ class RevealNetwork(nn.Module):
                       padding="same"), # "same" (output has same shape as input)
                       # padding=1), # padding of 1 to maintain same shape of 224x224
             nn.BatchNorm2d(out_channels),
-            nn.PReLU(out_channels), # add non-linearity activation function.
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=3,

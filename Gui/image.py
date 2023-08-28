@@ -5,6 +5,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib import pyplot
+import numpy as np
 
 from torch.utils.data import IterableDataset
 import queue
@@ -194,6 +195,10 @@ def test_plot(cover, cover_x, secret, secret_x, show_image=True):
 
 
     # Residual Error Section
+    cover_error = np.abs(cover_x_denorm - cover_denorm)
+    secret_error = np.abs(secret_x_denorm - secret_denorm)
+    
+
     gs01_ax00 = fig.add_subplot(gs01[0, 0])
     gs01_ax00.imshow(cover_denorm) 
     gs01_ax00.set_title(f"Cover")
@@ -205,8 +210,19 @@ def test_plot(cover, cover_x, secret, secret_x, show_image=True):
     gs01_ax01.axis("off")
 
     gs01_ax02 = fig.add_subplot(gs01[0, 2])
+    gs01_ax02.imshow(np.multiply(cover_error, 1.0))
+    gs01_ax02.set_title(f"Residual Error x1")
+    gs01_ax02.axis("off")
+
     gs01_ax03 = fig.add_subplot(gs01[0, 3])
+    gs01_ax03.imshow(np.multiply(cover_error, 3.0))
+    gs01_ax03.set_title(f"Residual Error x3")
+    gs01_ax03.axis("off")
+
     gs01_ax04 = fig.add_subplot(gs01[0, 4])
+    gs01_ax04.imshow(np.multiply(cover_error, 5.0))
+    gs01_ax04.set_title(f"Residual Error x5")
+    gs01_ax04.axis("off")
 
     gs01_ax10 = fig.add_subplot(gs01[1, 0])
     gs01_ax10.imshow(secret_denorm) 
@@ -219,50 +235,20 @@ def test_plot(cover, cover_x, secret, secret_x, show_image=True):
     gs01_ax11.axis("off")
 
     gs01_ax12 = fig.add_subplot(gs01[1, 2])
+    gs01_ax12.imshow(np.multiply(secret_error, 1.0))
+    gs01_ax12.set_title(f"Residual Error x1")
+    gs01_ax12.axis("off")
+
     gs01_ax13 = fig.add_subplot(gs01[1, 3])
+    gs01_ax13.imshow(np.multiply(secret_error, 3.0))
+    gs01_ax13.set_title(f"Residual Error x3")
+    gs01_ax13.axis("off")
+
     gs01_ax14 = fig.add_subplot(gs01[1, 4])
+    gs01_ax14.imshow(np.multiply(secret_error, 5.0))
+    gs01_ax14.set_title(f"Residual Error x5")
+    gs01_ax14.axis("off")
 
-    # for i in range(2):
-    #     for j in range(2):
-    #         ax00 = fig.add_subplot(gs00[i, j])
-    #         ax00.text(0.5, 0.5, '0_{}_{}'.format(i, j), ha='center')
-    #         ax00.set_xticks([])
-    #         ax00.set_yticks([])
-    
-    # for i in range(2):
-    #     for j in range(5):
-    #         ax01 = fig.add_subplot(gs01[i, j])
-    #         ax01.text(0.5, 0.5, '1_{}_{}'.format(i, j), ha='center')
-    #         ax01.set_xticks([])
-    #         ax01.set_yticks([])
-
-
-    # # Denomralize and plot images for visual comparison.
-
-    # # for i, x in enumerate(X):
-    # fig, ax = plt.subplots(2, 2)
-    # # Note: permute() will change shape of image to suit matplotlib 
-    # # (PyTorch default is [C, H, W] but Matplotlib is [H, W, C])
-    # cover_denorm = denormalize(cover).permute(1, 2, 0)
-    # ax[0,0].imshow(cover_denorm) 
-    # ax[0,0].set_title(f"Original Cover")
-    # ax[0,0].axis("off")
-
-    # cover_x_denorm = denormalize(cover_x).permute(1, 2, 0)
-    # ax[0,1].imshow(cover_x_denorm) 
-    # ax[0,1].set_title(f"Reconstructed Cover")
-    # ax[0,1].axis("off")
-
-
-    # secret_denorm = denormalize(secret).permute(1, 2, 0)
-    # ax[1,0].imshow(secret_denorm) 
-    # ax[1,0].set_title(f"Original Secret")
-    # ax[1,0].axis("off")
-
-    # secret_x_denorm = denormalize(secret_x).permute(1, 2, 0)
-    # ax[1,1].imshow(secret_x_denorm) 
-    # ax[1,1].set_title(f"Recovered Secret")
-    # ax[1,1].axis("off")
 
     fig.suptitle(f"Image Comparison", fontsize=16)
 
@@ -330,6 +316,8 @@ def test_plot_reveal(secret, secret_x, show_image=True):
 
 
     # Residual Error Section
+    secret_error = np.abs(secret_x_denorm - secret_denorm)
+
     gs01_ax00 = fig.add_subplot(gs01[0, 0])
     gs01_ax00.imshow(secret_denorm) 
     gs01_ax00.set_title(f"Secret")
@@ -341,8 +329,19 @@ def test_plot_reveal(secret, secret_x, show_image=True):
     gs01_ax01.axis("off")
 
     gs01_ax02 = fig.add_subplot(gs01[0, 2])
+    gs01_ax02.imshow(np.multiply(secret_error, 1.0))
+    gs01_ax02.set_title(f"Residual Error x1")
+    gs01_ax02.axis("off")
+
     gs01_ax03 = fig.add_subplot(gs01[0, 3])
+    gs01_ax03.imshow(np.multiply(secret_error, 3.0))
+    gs01_ax03.set_title(f"Residual Error x3")
+    gs01_ax03.axis("off")
+
     gs01_ax04 = fig.add_subplot(gs01[0, 4])
+    gs01_ax04.imshow(np.multiply(secret_error, 5.0))
+    gs01_ax04.set_title(f"Residual Error x5")
+    gs01_ax04.axis("off")
 
 
     fig.suptitle(f"Image Comparison", fontsize=16)
@@ -363,6 +362,14 @@ def hide_image_command():
     hide_image(model=model, cover=cover, secret=secret)
 
 
+# def image_errors(cover, cover_x, secret, secret_x):
+#     # Get absolute difference between original and recontructed images.
+#     cover_error, secret_error = np.abs(secret_x - secret), np.abs(cover_x - cover)
+
+#     # # Plot distribution of errors in cover and secret images.
+#     # pixel_histogram(diff_S, diff_C)
+
+
 
 if __name__ == "__main__":
     cover = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/page1/image_1.png")).convert('RGB')
@@ -376,7 +383,7 @@ if __name__ == "__main__":
     #     image_denorm.show()
 
     model = get_model()
-    reveal_image(model, cover, secret)
+    hide_image(model, cover, secret)
 
 
 

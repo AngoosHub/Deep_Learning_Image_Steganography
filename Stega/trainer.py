@@ -42,8 +42,8 @@ NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 
 # Set cpu number for loading data
 NUM_CPU = 1
-if os.cpu_count() > 35:
-    NUM_CPU = 10 # 10 used for each train, val, and test dataloader.
+if os.cpu_count() > 25:
+    NUM_CPU = 5 # 5 used for each train, val, and test dataloader.
 
 # Set torch seed
 torch.manual_seed(42)
@@ -51,7 +51,7 @@ torch.manual_seed(42)
 
 def train(load_model=False, load_path=""):
 
-    batch_idx = 1
+    batch_idx = 0
     epoch_idx = 1
 
     # Set device type
@@ -104,8 +104,8 @@ def train(load_model=False, load_path=""):
 
 
     if not SKIP_WANDB:
-        # watch our model and custom loss function
-        wandb.watch(test_model, my_custom_loss, log="all", log_freq=100)
+        # watch our model and custom loss function, logs the model gradients.
+        wandb.watch(test_model, my_custom_loss, log="all", log_freq=100000)
 
     for n in range(EPOCHS):
         train_step(
@@ -318,7 +318,8 @@ def test_plot_single_batch(img_cover, img_secret, test_model, device):
     secret = cuda_secret.cpu().squeeze(0)
     secret_x = recovered_secret.cpu().squeeze(0)
 
-    fig = utils.plot_images_comparison(cover, cover_x, secret, secret_x, show_image=False)
+    # fig = utils.plot_images_comparison(cover, cover_x, secret, secret_x, show_image=False)
+    fig = utils.test_plot(cover, cover_x, secret, secret_x, show_image=False)
     if not SKIP_WANDB:
         wandb.log({"Image": fig})
 
@@ -403,7 +404,6 @@ def train_step(model: torch.nn.Module,
                epoch_total,
                val_dataloader: torch.utils.data.DataLoader):
                   
-    model.train()
     train_loss = []
     cover_loss = []
     secret_loss = []
@@ -414,7 +414,7 @@ def train_step(model: torch.nn.Module,
 
 
     for index, (data, label) in enumerate(dataloader):
-
+        model.train()
         # Split batch into cover and secret
         a, b = data.split(batch_size//2,dim=0)
 
@@ -465,7 +465,7 @@ def train_step(model: torch.nn.Module,
         # print(f'Batch {index+1}/{len(dataloader)} | combined_loss = {combined_loss.item():.4f} | cover_loss = | secret_loss = ')
 
         # log progress every 100 batches
-        if not SKIP_WANDB and batch_idx % 100 == 0:
+        if not SKIP_WANDB and batch_idx % 10000 == 0:
             wandb.log({#'train/batch': batch_idx,
                     'train/batch_loss': combined_loss.item(),
                     'train/batch_cover_loss': c_loss.item(),
@@ -476,12 +476,14 @@ def train_step(model: torch.nn.Module,
                     # 'train/batch_secret_ssim': 1-s_ssim.metrics['ssim']
                     })
             
-            validation_step(model, 
-                            val_dataloader, 
-                            loss,
-                            device,
-                            batch_size,
-                            batch_idx)
+        if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
+            if (batch_idx % 100 == 0 and batch_idx <= 1000):
+                validation_step(model, 
+                                val_dataloader, 
+                                loss,
+                                device,
+                                batch_size,
+                                batch_idx)
             
         
         batch_idx += 1
@@ -511,7 +513,7 @@ def validation_step(model: torch.nn.Module,
         combined_loss,  c_loss, s_loss, c_mse, s_mse, c_ssim, s_ssim  = loss(model_covers, model_secrets, covers, secrets)
     
     # log progress every 100 batches
-        if not SKIP_WANDB and batch_idx % 100 == 0:
+        if not SKIP_WANDB and batch_idx % 10000 == 0:
             wandb.log({#'train/batch': batch_idx,
                     'train/batch_loss_val': combined_loss.item(),
                     'train/batch_cover_loss_val': c_loss.item(),
@@ -522,10 +524,10 @@ def validation_step(model: torch.nn.Module,
                     # 'train/batch_secret_ssim_val': 1-s_ssim.metrics['ssim']
                     })
             
-            if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
-                if (batch_idx % 100 == 0 and batch_idx <= 1000):
-                    # Try plotting a batch of image fed to model.
-                    test_plot_single_batch(img_cover, img_secret, model, device)
+        if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
+            if (batch_idx % 1000 == 0 and batch_idx <= 10000):
+                # Try plotting a batch of image fed to model.
+                test_plot_single_batch(img_cover, img_secret, model, device)
 
     # Turn training back on after eval finished
     model.train()
