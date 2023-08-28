@@ -3,8 +3,10 @@ from pathlib import Path
 
 from tkinter import *
 from PIL import Image, ImageTk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 import math
+
+from image import *
 
 # Explicit imports to satisfy Flake8
 # from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage
@@ -638,6 +640,20 @@ def page2_cover_image_picker(canvas, image_on_canvas, self):
     global page2_cover
     img = image_picker(canvas, image_on_canvas, self)
     page2_cover = img
+
+
+
+# def open_popup():
+#     top= Toplevel(win)
+#     top.geometry("862x519")
+#     top.title("Steganography Hide")
+# #    Label(top, text= "Hello World!", font=('Mistral 18 bold')).place(x=150,y=80)
+
+#     l = Label(win, text="Input")
+#     l.grid(row=0, column=0)
+
+#     b = ttk.Button(win, text="Okay", command=win.destroy)
+#     b.grid(row=1, column=0)
 
 
 
