@@ -5,7 +5,7 @@ services:
     runtime: nvidia  
     shm_size: '16gb'  
     environment:
-      - NVIDIA_VISIBLE_DEVICES=0,3  # or device number (e.g. 0) to allow a single gpu
+      - NVIDIA_VISIBLE_DEVICES=2  # or device number (e.g. 0) to allow a single gpu
     ports:
       - "60000:9092"  # port for access
     # volumes:
