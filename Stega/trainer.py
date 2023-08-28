@@ -105,7 +105,7 @@ def train(load_model=False, load_path=""):
 
     if not SKIP_WANDB:
         # watch our model and custom loss function, logs the model gradients.
-        wandb.watch(test_model, my_custom_loss, log="all", log_freq=100000)
+        wandb.watch(test_model, my_custom_loss, log="all", log_freq=5000)
 
     for n in range(EPOCHS):
         train_step(
