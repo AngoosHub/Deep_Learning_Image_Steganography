@@ -32,28 +32,31 @@ class PrepareNetwork(nn.Module):
                       stride=1, # default, kernel window slides 1 pixel when scanning over image.
                       padding="same"), # "same" (output has same shape as input)
                       # padding=1), # padding of 1 to maintain same shape of 224x224
-            nn.ReLU(), # add non-linearity activation function.
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels), # add non-linearity activation function.
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Second convolutional block uses 4x4 kernel with 50 channels.
         self.conv_block_4x4 = nn.Sequential(
@@ -63,28 +66,32 @@ class PrepareNetwork(nn.Module):
                       stride=1,
                     #   padding="same"), # UserWarning: Using padding='same' with even kernel lengths and odd dilation may require a zero-padded copy of the input be created
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Third convolutional block uses 5x5 kernel with 50 channels.
         self.conv_block_5x5 = nn.Sequential(
@@ -94,28 +101,32 @@ class PrepareNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=2), # padding of 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
 
         ### After first concatenation ###
@@ -127,14 +138,15 @@ class PrepareNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             # nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
             #           out_channels=out_channels, # Keep 50 for output channels.
             #           kernel_size=3,
             #           stride=1,
             #           padding="same"),
             #           # padding=1),
-            # nn.ReLU(),
+            # nn.PReLU(),
         )
         # Conv block takes 150 input channels with 4x4 kernels, outputs 50 channels. (2 layers due to 4x4 kernel imbalanced padding)
         self.conv_block_4x4_concat = nn.Sequential(
@@ -144,14 +156,16 @@ class PrepareNetwork(nn.Module):
                       stride=1,
                     #   padding="same"),
                       padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Conv block takes 150 input channels with 5x5 kernels, outputs 50 channels.
         self.conv_block_5x5_concat = nn.Sequential(
@@ -161,14 +175,15 @@ class PrepareNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             # nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
             #           out_channels=out_channels, # Keep 50 for output channels.
             #           kernel_size=5,
             #           stride=1,
             #           padding="same"),
             #           # padding=1),
-            # nn.ReLU(),
+            # nn.PReLU(),
         )
     
     def forward(self, input_tensor: torch.Tensor):
@@ -246,28 +261,32 @@ class HidingNetwork(nn.Module):
                       stride=1, # default, kernel window slides 1 pixel when scanning over image.
                       padding="same"), # "same" (output has same shape as input)
                       # padding=1), # padding of 1 to maintain same shape of 224x224
-            nn.ReLU(), # add non-linearity activation function.
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels), # add non-linearity activation function.
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Second convolutional block uses 4x4 kernel with 50 channels.
         self.conv_block_4x4 = nn.Sequential(
@@ -277,28 +296,32 @@ class HidingNetwork(nn.Module):
                       stride=1,
                     #   padding="same"), # UserWarning: Using padding='same' with even kernel lengths and odd dilation may require a zero-padded copy of the input be created
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Third convolutional block uses 5x5 kernel with 50 channels.
         self.conv_block_5x5 = nn.Sequential(
@@ -308,28 +331,32 @@ class HidingNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=2), # padding of 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
 
         ### After first concatenation ###
@@ -341,7 +368,8 @@ class HidingNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Conv block takes 150 input channels with 4x4 kernels, outputs 50 channels. (2 layers due to 4x4 kernel imbalanced padding)
         self.conv_block_4x4_concat = nn.Sequential(
@@ -351,14 +379,16 @@ class HidingNetwork(nn.Module):
                       stride=1,
                     #   padding="same"),
                       padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Conv block takes 150 input channels with 5x5 kernels, outputs 50 channels.
         self.conv_block_5x5_concat = nn.Sequential(
@@ -368,7 +398,8 @@ class HidingNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
 
         ### After second concatenation ###
@@ -380,7 +411,8 @@ class HidingNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=0), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
     
     def forward(self, input_tensor: torch.Tensor):
@@ -475,28 +507,32 @@ class RevealNetwork(nn.Module):
                       stride=1, # default, kernel window slides 1 pixel when scanning over image.
                       padding="same"), # "same" (output has same shape as input)
                       # padding=1), # padding of 1 to maintain same shape of 224x224
-            nn.ReLU(), # add non-linearity activation function.
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels), # add non-linearity activation function.
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Second convolutional block uses 4x4 kernel with 50 channels.
         self.conv_block_4x4 = nn.Sequential(
@@ -506,28 +542,32 @@ class RevealNetwork(nn.Module):
                       stride=1,
                     #   padding="same"), # UserWarning: Using padding='same' with even kernel lengths and odd dilation may require a zero-padded copy of the input be created
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2), # alternate padding of 1 and 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Third convolutional block uses 5x5 kernel with 50 channels.
         self.conv_block_5x5 = nn.Sequential(
@@ -537,28 +577,32 @@ class RevealNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=2), # padding of 2 to maintain same shape of 224x224
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 3rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=1),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # 4th conv2d later
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
                       padding="same"),
                       # padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
 
         ### After first concatenation ###
@@ -570,7 +614,8 @@ class RevealNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Conv block takes 150 input channels with 4x4 kernels, outputs 50 channels. (2 layers due to 4x4 kernel imbalanced padding)
         self.conv_block_4x4_concat = nn.Sequential(
@@ -580,14 +625,16 @@ class RevealNetwork(nn.Module):
                       stride=1,
                     #   padding="same"),
                       padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
             nn.Conv2d(in_channels=out_channels, # Takes previous Conv2d out_channels as input.
                       out_channels=out_channels, # Keep 50 for output channels.
                       kernel_size=4,
                       stride=1,
                     #   padding="same"),
                       padding=2),
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
         # Conv block takes 150 input channels with 5x5 kernels, outputs 50 channels.
         self.conv_block_5x5_concat = nn.Sequential(
@@ -597,7 +644,8 @@ class RevealNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=1), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
 
         ### After second concatenation ###
@@ -609,7 +657,8 @@ class RevealNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=0), 
-            nn.ReLU(),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU(out_channels),
         )
     
     def forward(self, input_tensor: torch.Tensor):

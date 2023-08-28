@@ -13,8 +13,8 @@ def denormalize(tensor):
                                   std=[1/0.229, 1/0.224, 1/0.225])
     
     # REMOVE TO NORMALIZE! SKIPPING TO TEST IF IMPROVES MODEL TRAINING
-    # return denorm(tensor)
-    return tensor
+    return denorm(tensor)
+    # return tensor
 
 
 def plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True):

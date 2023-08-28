@@ -85,21 +85,27 @@ def train(load_model=False, load_path=""):
 
     my_custom_loss = MSE_and_SSIM_loss()
     test_model = CombinedNetwork()
-    optimizer = torch.optim.Adam(test_model.parameters(), lr=LEARNING_RATE)
+    
+    # optimizer = torch.optim.Adam(test_model.net_prep.parameters(), lr=LEARNING_RATE)
+    optimizer = torch.optim.AdamW(list(test_model.net_prep.parameters()) + list(test_model.net_hide.parameters()), lr=LEARNING_RATE)
+    optimizer_reveal = torch.optim.AdamW(test_model.net_reveal.parameters(), lr=LEARNING_RATE)
 
     if load_model:
         checkpoint = torch.load(load_path)
         test_model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        optimizer_reveal.load_state_dict(checkpoint['optimizer_reveal_state_dict'])
         epoch_idx = checkpoint['epoch']
         batch_idx = checkpoint['batch']
     
     test_model.to(device)
 
+    test_model.apply(init_weights)
+
 
     if not SKIP_WANDB:
         # watch our model and custom loss function
-        wandb.watch(test_model, my_custom_loss, log="all", log_freq=50)
+        wandb.watch(test_model, my_custom_loss, log="all", log_freq=100)
 
     for n in range(EPOCHS):
         train_step(
@@ -107,6 +113,7 @@ def train(load_model=False, load_path=""):
             dataloader=train_dataloader,
             loss=my_custom_loss,
             optimizer=optimizer,
+            optimizer=optimizer_reveal,
             device=device,
             batch_size=BATCH_SIZE,
             batch_idx=batch_idx,
@@ -155,7 +162,7 @@ def train(load_model=False, load_path=""):
 
         # Save checkpoint after each epoch
         if SAVE_EPOCH_PROGRESS:
-            save_checkpoint(test_model, optimizer, device, epoch_idx, batch_idx)
+            save_checkpoint(test_model, optimizer, optimizer_reveal, device, epoch_idx, batch_idx)
 
         epoch_idx += 1
     
@@ -181,7 +188,7 @@ def get_train_dataloader(train_dir, batch_size, num_cpu, normalize):
         transforms.RandomHorizontalFlip(p=0.5),
         # transforms.TrivialAugmentWide(num_magnitude_bins=31),
         transforms.ToTensor(),
-        # normalize
+        normalize
         ])
 
     # Use ImageFolder to create dataset(s)
@@ -226,7 +233,7 @@ def get_val_dataloader(val_dir, batch_size, num_cpu, normalize):
         # transforms.RandomHorizontalFlip(p=0.5),
         # transforms.TrivialAugmentWide(num_magnitude_bins=31),
         transforms.ToTensor(),
-        # normalize
+        normalize
         ])
     
     val_dataset = datasets.ImageFolder(root=val_dir,
@@ -255,7 +262,7 @@ def get_test_dataloader(test_dir, batch_size, num_cpu, normalize):
         transforms.Resize(size=(224)),
         transforms.CenterCrop(size=(224, 224)),
         transforms.ToTensor(),
-        # normalize
+        normalize
         ])
     
     test_dataset = datasets.ImageFolder(root=test_dir,
@@ -360,10 +367,10 @@ class MSE_and_SSIM_loss(nn.Module):
 
         # print(f"Cover Loss: {cover_loss}")
         # print(f"Secret Loss: {secret_loss}")
-
+        
         combined_loss = cover_loss + BETA * secret_loss
 
-        return combined_loss, cover_loss, secret_loss, cover_mse, secret_mse, cover_ssim, secret_ssim
+        return combined_loss, cover_loss, (BETA * secret_loss), cover_mse, secret_mse, cover_ssim, secret_ssim
 
 
 
@@ -388,6 +395,7 @@ def train_step(model: torch.nn.Module,
                dataloader: torch.utils.data.DataLoader, 
                loss: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
+               optimizer_reveal: torch.optim.Optimizer,
                device,
                batch_size,
                batch_idx,
@@ -414,10 +422,6 @@ def train_step(model: torch.nn.Module,
         covers = a.to(device)
         secrets = b.to(device)
 
-        # During training, we zero out gradient in optimizer, 
-        # so that our backpropagation does not include information from previous passes.
-        optimizer.zero_grad()
-
         # Forward
         model_covers, model_secrets = model(covers, secrets)
 
@@ -442,7 +446,16 @@ def train_step(model: torch.nn.Module,
         # cover_loss_ssim.append(1-c_ssim.metrics['ssim'])
         # secret_loss_ssim.append(1-s_ssim.metrics['ssim'])
 
-        # Backpropagate and optimize
+        # During training, we zero out gradient in optimizer, 
+        # so that our backpropagation does not include information from previous passes.
+        optimizer_reveal.zero_grad()
+
+        # Backpropagate and optimize Reveal optimizer
+        s_loss.backward(retain_graph=True)
+        optimizer_reveal.step()
+
+        # Backpropagate and optimize Prep & Hide optimizer
+        optimizer.zero_grad()
         combined_loss.backward()
         optimizer.step()
 
@@ -451,8 +464,8 @@ def train_step(model: torch.nn.Module,
               f'Batch {index}/{len(dataloader)}:  combined_loss = {combined_loss.item():.4f}, cover_loss = {c_loss.item():.4f}, secret_loss = {s_loss.item():.4f}')
         # print(f'Batch {index+1}/{len(dataloader)} | combined_loss = {combined_loss.item():.4f} | cover_loss = | secret_loss = ')
 
-        # log progress every 50 batches
-        if not SKIP_WANDB and batch_idx % 50 == 0:
+        # log progress every 100 batches
+        if not SKIP_WANDB and batch_idx % 100 == 0:
             wandb.log({#'train/batch': batch_idx,
                     'train/batch_loss': combined_loss.item(),
                     'train/batch_cover_loss': c_loss.item(),
@@ -497,8 +510,8 @@ def validation_step(model: torch.nn.Module,
         model_covers, model_secrets = model(covers, secrets)
         combined_loss,  c_loss, s_loss, c_mse, s_mse, c_ssim, s_ssim  = loss(model_covers, model_secrets, covers, secrets)
     
-    # log progress every 50 batches
-        if not SKIP_WANDB and batch_idx % 50 == 0:
+    # log progress every 100 batches
+        if not SKIP_WANDB and batch_idx % 100 == 0:
             wandb.log({#'train/batch': batch_idx,
                     'train/batch_loss_val': combined_loss.item(),
                     'train/batch_cover_loss_val': c_loss.item(),
@@ -518,7 +531,7 @@ def validation_step(model: torch.nn.Module,
     model.train()
 
 
-def save_checkpoint(model, optimizer, device, epoch_idx, batch_idx):
+def save_checkpoint(model, optimizer, optimizer_reveal, device, epoch_idx, batch_idx):
     # Check if save model flag is active
         if SAVE_EPOCH_PROGRESS:
             timestamp = f'{time.strftime("%Y%m%d-%H%M%S")}'
@@ -536,7 +549,8 @@ def save_checkpoint(model, optimizer, device, epoch_idx, batch_idx):
             save_state = {'epoch': epoch_idx,
                           'batch': batch_idx,
                           'model_state_dict': model.state_dict(),
-                          'optimizer_state_dict': optimizer.state_dict()}
+                          'optimizer_state_dict': optimizer.state_dict(),
+                          'optimizer_reveal_state_dict': optimizer_reveal.state_dict()}
 
             utils.save_model(model=save_state, model_name=model_name)
 
@@ -559,6 +573,12 @@ def save_checkpoint(model, optimizer, device, epoch_idx, batch_idx):
 
 
 
+def init_weights(m):
+    if isinstance(m, nn.Conv2d):
+        nn.init.kaiming_normal_(m.weight)
+    # for l in m.children(): init_weights(l)
+
+
             
 # Seed Pytorch dataloader random seed for workers.
 def seed_worker(worker_id):
@@ -575,8 +595,8 @@ if __name__ == "__main__":
     data_path = Path("data/")
     if not os.path.isdir('data/'):
         data_path = Path("../data/")
-    # test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1, NORMALIZE)
-    test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1)
+    test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1, NORMALIZE)
+    # test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1)
     global img_cover, img_secret
     img_cover, img_secret = get_single_batch_into_image(test_plot_dataloader)
 
