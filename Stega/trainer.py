@@ -11,6 +11,9 @@ import numpy as np
 import wandb
 import random
 
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 
 # from collections import OrderedDict
 
@@ -29,8 +32,8 @@ SAVE_EPOCH_PROGRESS = True # False to to skip saving models when testing
 SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = False # True to skip saving image showing early learning progress
 # WANDB_VAR
 
-LEARNING_RATE = 0.0001 # 0.0001 slower
-BATCH_SIZE = 8 # above 16 runs out of memory
+LEARNING_RATE = 0.001 # 0.0001 slower
+BATCH_SIZE = 32 # above 16 runs out of memory
 EPOCHS = 1 # 3 Epochs takes about 7 hours
 BETA = 0.75
 RESUME_EPOCH = 1 # Set to resume checkpoint's epoch number (ignored if = 1)
