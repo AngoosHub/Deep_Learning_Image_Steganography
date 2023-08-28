@@ -412,8 +412,8 @@ class HidingNetwork(nn.Module):
                       stride=1,
                       padding="same"),
                       # padding=0), 
-            nn.BatchNorm2d(out_channels),
-            nn.PReLU(out_channels),
+            # nn.BatchNorm2d(output_shape),
+            # nn.PReLU(output_shape),
         )
     
     def forward(self, input_tensor: torch.Tensor):

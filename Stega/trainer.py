@@ -113,7 +113,7 @@ def train(load_model=False, load_path=""):
             dataloader=train_dataloader,
             loss=my_custom_loss,
             optimizer=optimizer,
-            optimizer=optimizer_reveal,
+            optimizer_reveal=optimizer_reveal,
             device=device,
             batch_size=BATCH_SIZE,
             batch_idx=batch_idx,
