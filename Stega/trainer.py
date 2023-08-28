@@ -477,7 +477,7 @@ def train_step(model: torch.nn.Module,
                     })
             
         if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
-            if (batch_idx % 100 == 0 and batch_idx <= 1000):
+            if (batch_idx % 1000 == 0 and batch_idx <= 10000):
                 validation_step(model, 
                                 val_dataloader, 
                                 loss,
@@ -488,7 +488,6 @@ def train_step(model: torch.nn.Module,
         
         batch_idx += 1
 
-        break
 
     # Uncomment for wandb logging of average epoch error.
     # return train_loss, cover_loss, secret_loss, cover_loss_mse,secret_loss_mse, cover_loss_ssim, secret_loss_ssim
