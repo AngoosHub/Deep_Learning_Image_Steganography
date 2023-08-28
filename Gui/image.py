@@ -70,7 +70,7 @@ def normalize_and_transform(image):
         transforms.Resize(size=(224)),
         transforms.CenterCrop(size=(224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
     image_transform = data_transforms(image)
     return image_transform

@@ -181,7 +181,7 @@ def get_train_dataloader(train_dir, batch_size, num_cpu, normalize):
         transforms.RandomHorizontalFlip(p=0.5),
         # transforms.TrivialAugmentWide(num_magnitude_bins=31),
         transforms.ToTensor(),
-        normalize
+        # normalize
         ])
 
     # Use ImageFolder to create dataset(s)
@@ -226,7 +226,7 @@ def get_val_dataloader(val_dir, batch_size, num_cpu, normalize):
         # transforms.RandomHorizontalFlip(p=0.5),
         # transforms.TrivialAugmentWide(num_magnitude_bins=31),
         transforms.ToTensor(),
-        normalize
+        # normalize
         ])
     
     val_dataset = datasets.ImageFolder(root=val_dir,
@@ -255,7 +255,7 @@ def get_test_dataloader(test_dir, batch_size, num_cpu, normalize):
         transforms.Resize(size=(224)),
         transforms.CenterCrop(size=(224, 224)),
         transforms.ToTensor(),
-        normalize
+        # normalize
         ])
     
     test_dataset = datasets.ImageFolder(root=test_dir,
@@ -575,7 +575,8 @@ if __name__ == "__main__":
     data_path = Path("data/")
     if not os.path.isdir('data/'):
         data_path = Path("../data/")
-    test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1, NORMALIZE)
+    # test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1, NORMALIZE)
+    test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1)
     global img_cover, img_secret
     img_cover, img_secret = get_single_batch_into_image(test_plot_dataloader)
 

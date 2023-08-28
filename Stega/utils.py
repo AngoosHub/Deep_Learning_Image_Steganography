@@ -11,7 +11,10 @@ from pathlib import Path
 def denormalize(tensor):
     denorm = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
                                   std=[1/0.229, 1/0.224, 1/0.225])
-    return denorm(tensor)
+    
+    # REMOVE TO NORMALIZE! SKIPPING TO TEST IF IMPROVES MODEL TRAINING
+    # return denorm(tensor)
+    return tensor
 
 
 def plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True):
