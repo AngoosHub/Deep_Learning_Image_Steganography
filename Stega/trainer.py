@@ -29,7 +29,7 @@ SAVE_EPOCH_PROGRESS = True # False to to skip saving models when testing
 SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = False # True to skip saving image showing early learning progress
 # WANDB_VAR
 
-LEARNING_RATE = 0.001 # 0.0001 slower
+LEARNING_RATE = 0.0001 # 0.0001 slower
 BATCH_SIZE = 8 # above 16 runs out of memory
 EPOCHS = 1 # 3 Epochs takes about 7 hours
 BETA = 0.75
