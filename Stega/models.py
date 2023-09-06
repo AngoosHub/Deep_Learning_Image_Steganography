@@ -12,15 +12,20 @@ class PrepareNetwork(nn.Module):
         Takes in secret image as input.
         Outputs secret image with extracted features.
     Part A:
-        First convolutional block uses 3x3 kernel with 3 input channels (RGB) and 50 output channels. (4 layers)
-        Second convolutional block uses 4x4 kernel with 3 input channels (RGB) and 50 output channels. (4 layers)
-        Third convolutional block uses 5x5 kernel with 3 input channels (RGB) and 50 output channels. (4 layers)
-    Concat the output channels from the first three convolutional blocks (50*3 = 150 channels)
+        First convolutional block uses 3x3 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from Part A's three convolutional blocks (50*3 = 150 channels)
     Part B:
-        First convolutional block uses 3x3 kernel with 150 input channels and 50 output channels. (1 layer)
-        Second convolutional block uses 4x4 kernel with 150 input channels and 50 output channels. (2 layer)
-        Third convolutional block uses 5x5 kernel with 150 input channels and 50 output channels. (1 layer)
-    Concat the output channels from the first three convolutional blocks (50*3 = 150 channels)
+        First convolutional block uses 3x3 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from the Part B's three convolutional blocks (50*3 = 150 channels)
+    Part C:
+        First convolutional block uses 3x3 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from the Part C's three convolutional blocks (50*3 = 150 channels)
     '''
     def __init__(self, inital_in_channels: int = 3, out_channels: int = 50):
         super().__init__()
@@ -62,7 +67,7 @@ class PrepareNetwork(nn.Module):
             nn.PReLU(out_channels),
         )
         self.conv_block_3x3_c = nn.Sequential(
-            nn.Conv2d(in_channels=out_channels*3, # 3rd conv2d layer
+            nn.Conv2d(in_channels=out_channels*3, # 5rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
@@ -70,7 +75,7 @@ class PrepareNetwork(nn.Module):
                       # padding=1),
             nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
-            nn.Conv2d(in_channels=out_channels, # 4th conv2d later
+            nn.Conv2d(in_channels=out_channels, # 6th conv2d later
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
@@ -117,7 +122,7 @@ class PrepareNetwork(nn.Module):
             nn.PReLU(out_channels),
         )
         self.conv_block_4x4_c = nn.Sequential(
-            nn.Conv2d(in_channels=out_channels*3, # 3rd conv2d layer
+            nn.Conv2d(in_channels=out_channels*3, # 5rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
@@ -125,7 +130,7 @@ class PrepareNetwork(nn.Module):
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
             nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
-            nn.Conv2d(in_channels=out_channels, # 4th conv2d later
+            nn.Conv2d(in_channels=out_channels, # 6th conv2d later
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
@@ -172,7 +177,7 @@ class PrepareNetwork(nn.Module):
             nn.PReLU(out_channels),
         )
         self.conv_block_5x5_c = nn.Sequential(
-            nn.Conv2d(in_channels=out_channels*3, # 3rd conv2d layer
+            nn.Conv2d(in_channels=out_channels*3, # 5rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
@@ -180,7 +185,7 @@ class PrepareNetwork(nn.Module):
                       # padding=1),
             nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
-            nn.Conv2d(in_channels=out_channels, # 4th conv2d later
+            nn.Conv2d(in_channels=out_channels, # 6th conv2d later
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
@@ -313,16 +318,21 @@ class HidingNetwork(nn.Module):
         Takes in cover image channels and prepare network output (secret image) concatenated as input.
         Adds noise to the output tensor (modified cover image), so network generalizes a hiding method beyond just LSB.
     Part A:
-        First convolutional block uses 3x3 kernel with 153 input channels and 50 output channels. (4 layers)
-        Second convolutional block uses 4x4 kernel with 153 input channels and 50 output channels. (4 layers)
-        Third convolutional block uses 5x5 kernel with 153 input channels and 50 output channels. (4 layers)
-        Concat the output channels from the first three convolutional blocks (50*3 = 150 channels)
+        First convolutional block uses 3x3 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from Part A's three convolutional blocks (50*3 = 150 channels)
     Part B:
-        First convolutional block uses 3x3 kernel with 150 input channels and 50 output channels. (1 layer)
-        Second convolutional block uses 4x4 kernel with 150 input channels and 50 output channels. (2 layer)
-        Third convolutional block uses 5x5 kernel with 150 input channels and 50 output channels. (1 layer)
-        Concat the output channels from the first three convolutional blocks (50*3 = 150 channels)
+        First convolutional block uses 3x3 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from the Part B's three convolutional blocks (50*3 = 150 channels)
     Part C:
+        First convolutional block uses 3x3 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from the Part C's three convolutional blocks (50*3 = 150 channels)
+    Part D:
         First convolutional block dimensionality reduction uses 1x1 kernel with 150 input channels and 3 output channels. (1 layer)
         (This outputs tensor back into image with 3 channel)
         Add the output image with a random noise tensor to add noise into the image.
@@ -367,7 +377,7 @@ class HidingNetwork(nn.Module):
             nn.PReLU(out_channels),
         )
         self.conv_block_3x3_c = nn.Sequential(
-            nn.Conv2d(in_channels=out_channels*3, # 3rd conv2d layer
+            nn.Conv2d(in_channels=out_channels*3, # 5rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
@@ -375,7 +385,7 @@ class HidingNetwork(nn.Module):
                       # padding=1),
             nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
-            nn.Conv2d(in_channels=out_channels, # 4th conv2d later
+            nn.Conv2d(in_channels=out_channels, # 6th conv2d later
                       out_channels=out_channels,
                       kernel_size=3,
                       stride=1,
@@ -422,7 +432,7 @@ class HidingNetwork(nn.Module):
             nn.PReLU(out_channels),
         )
         self.conv_block_4x4_c = nn.Sequential(
-            nn.Conv2d(in_channels=out_channels*3, # 3rd conv2d layer
+            nn.Conv2d(in_channels=out_channels*3, # 5rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
@@ -430,7 +440,7 @@ class HidingNetwork(nn.Module):
                       padding=1), # alternate padding of 1 and 2 to maintain same shape of 224x224
             nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
-            nn.Conv2d(in_channels=out_channels, # 4th conv2d later
+            nn.Conv2d(in_channels=out_channels, # 6th conv2d later
                       out_channels=out_channels,
                       kernel_size=4,
                       stride=1,
@@ -477,7 +487,7 @@ class HidingNetwork(nn.Module):
             nn.PReLU(out_channels),
         )
         self.conv_block_5x5_c = nn.Sequential(
-            nn.Conv2d(in_channels=out_channels*3, # 3rd conv2d layer
+            nn.Conv2d(in_channels=out_channels*3, # 5rd conv2d layer
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
@@ -485,7 +495,7 @@ class HidingNetwork(nn.Module):
                       # padding=1),
             nn.BatchNorm2d(out_channels),
             nn.PReLU(out_channels),
-            nn.Conv2d(in_channels=out_channels, # 4th conv2d later
+            nn.Conv2d(in_channels=out_channels, # 6th conv2d later
                       out_channels=out_channels,
                       kernel_size=5,
                       stride=1,
@@ -643,16 +653,21 @@ class RevealNetwork(nn.Module):
         Takes in modifed cover image as input.
         Reveals/extracts the embedded secret image as output.
     Part A:
-        First convolutional block uses 3x3 kernel with 3 input channels (RGB) and 50 output channels. (4 layers)
-        Second convolutional block uses 4x4 kernel with 3 input channels (RGB) and 50 output channels. (4 layers)
-        Third convolutional block uses 5x5 kernel with 3 input channels (RGB) and 50 output channels. (4 layers)
-        Concat the output channels from the first three convolutional blocks (50*3 = 150 channels)
+        First convolutional block uses 3x3 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 3 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from Part A's three convolutional blocks (50*3 = 150 channels)
     Part B:
-        First convolutional block uses 3x3 kernel with 150 input channels and 50 output channels. (1 layer)
-        Second convolutional block uses 4x4 kernel with 150 input channels and 50 output channels. (2 layer)
-        Third convolutional block uses 5x5 kernel with 150 input channels and 50 output channels. (1 layer)
-        Concat the output channels from the first three convolutional blocks (50*3 = 150 channels)
+        First convolutional block uses 3x3 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from the Part B's three convolutional blocks (50*3 = 150 channels)
     Part C:
+        First convolutional block uses 3x3 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Second convolutional block uses 4x4 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+        Third convolutional block uses 5x5 kernel with 150 input channels (RGB) and 50 output channels. (2 layers)
+    Concat the output channels from the Part C's three convolutional blocks (50*3 = 150 channels)
+    Part D:
         First convolutional block dimensionality reduction uses 1x1 kernel with 150 input channels and 3 output channels. (1 layer)
         (This outputs tensor back into image with 3 channel)
     '''

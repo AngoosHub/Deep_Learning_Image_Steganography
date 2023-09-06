@@ -14,7 +14,7 @@ from torchvision import transforms
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
+old_model_path = Path("saved_models/old/Test_Model_Epoch_2.pth")
 
 
 class MyDataset(IterableDataset):
@@ -128,10 +128,14 @@ def plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True):
 
 
 
-def get_model():
-    model_path = Path("saved_models/20230711-063730/Test_Model_Epoch_2.pth")
+def get_model(model_path = old_model_path):
+    # model_path = Path("saved_models/20230711-063730/Test_Model_Epoch_2.pth")
     checkpoint = torch.load(model_path)
-    model = CombinedNetwork()
+
+    if model_path.resolve() == old_model_path.resolve():
+        model = CombinedNetwork_Old()
+    else:
+        model = CombinedNetwork()
     # optimizer = torch.optim.Adam(test_model.parameters(), lr=LEARNING_RATE)
     
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -353,13 +357,14 @@ def test_plot_reveal(secret, secret_x, show_image=True):
 import sys
 sys.path.insert(0, 'Deep_Learning_Image_Steganography/Stega')
 from models import CombinedNetwork
+from models_old import CombinedNetwork_Old
 
 cover = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/page1/image_1.png")).convert('RGB')
 secret = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/page1/image_2.png")).convert('RGB')
 model = get_model()
 
-def hide_image_command():
-    hide_image(model=model, cover=cover, secret=secret)
+# def hide_image_command():
+#     hide_image(model=model, cover=cover, secret=secret)
 
 
 # def image_errors(cover, cover_x, secret, secret_x):

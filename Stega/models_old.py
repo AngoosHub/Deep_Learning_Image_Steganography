@@ -664,7 +664,7 @@ class RevealNetwork(nn.Module):
 
 
 
-class CombinedNetwork(nn.Module):
+class CombinedNetwork_Old(nn.Module):
     '''
     Combined Network:
         Joins the all the networks together into a single neural network.

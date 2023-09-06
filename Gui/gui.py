@@ -108,7 +108,7 @@ class Page1(Frame):
             image=self.button_image_2,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: print("button_2 clicked"),
+            command=lambda: page1_hide_image_button_command(),
             relief="flat"
         )
         self.button_2.place(
@@ -275,7 +275,7 @@ class Page2(Frame):
             image=self.button_image_1,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: print("button_1 clicked"),
+            command=lambda: page2_reveal_image_button_command(),
             relief="flat"
         )
         self.button_1.place(
@@ -465,7 +465,7 @@ class Page3(Frame):
             image=self.button_image_1,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: print("button_1 clicked"),
+            command=lambda: model_picker(self.entry_1),
             relief="flat"
         )
         self.button_1.place(
@@ -607,7 +607,7 @@ def image_picker(canvas, image_on_canvas, imagelist):
         canvas.itemconfig(image_on_canvas, image = imagelist[-1])
     
     with Image.open(path) as img:
-        return img
+        return img.convert('RGB')
     
 
 def set_default_cover_secret_images():
@@ -640,6 +640,27 @@ def page2_cover_image_picker(canvas, image_on_canvas, self):
     global page2_cover
     img = image_picker(canvas, image_on_canvas, self)
     page2_cover = img
+
+
+def page1_hide_image_button_command():
+    hide_image(model=model, cover_o=page1_cover, secret_o=page1_secret)
+
+
+def page2_reveal_image_button_command():
+    reveal_image(model=model, cover_o=page2_cover, secret_o=page2_cover)
+
+
+def model_picker(entry):
+    path=filedialog.askopenfilename(filetypes=[("Image File",'*.pth')])
+
+    entry.delete(0,END)
+    entry.insert(0,path)
+
+    global model
+
+    model = get_model(Path(path))
+    return path, model
+    # print(model)
 
 
 
