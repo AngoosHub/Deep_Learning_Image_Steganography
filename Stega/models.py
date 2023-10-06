@@ -1097,7 +1097,7 @@ class DetectNetwork(nn.Module):
         Fully-connected and Sigmond layer for prediction.
         
     '''
-    def __init__(self, inital_in_channels: int = 3, out_channels: int = 50, output_shape: int = 3):
+    def __init__(self): # inital_in_channels: int = 3, out_channels: int = 1, output_shape: int = 1
         super().__init__()
 
         self.conv_block_3x3 = nn.Sequential(
