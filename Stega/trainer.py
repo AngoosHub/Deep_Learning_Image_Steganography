@@ -539,10 +539,11 @@ def train_step(model: torch.nn.Module,
             
         if SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0:
             save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx)
+            break
 
         batch_idx += 1
 
-        break  # REMOVE WHEN TRAINING
+        
 
 
     # Uncomment for wandb logging of average epoch error.
