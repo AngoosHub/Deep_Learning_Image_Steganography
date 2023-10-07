@@ -537,7 +537,7 @@ def train_step(model: torch.nn.Module,
             #                         batch_size,
             #                         batch_idx)
             
-        if SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0:
+        if SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0 and batch_idx >= 5000:
             save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx)
             break
 
