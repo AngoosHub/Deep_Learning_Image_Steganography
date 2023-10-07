@@ -10,6 +10,9 @@ import utils
 import numpy as np
 import wandb
 import random
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -29,13 +32,14 @@ from ignite.contrib.metrics import *
 
 SKIP_WANDB = False # True to skip wandb login and save time in testing
 SAVE_EPOCH_PROGRESS = True # False to to skip saving models when testing
+SAVE_PROGRESS_EVERY_10000_BATCHES = True
 SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = False # True to skip saving image showing early learning progress
 # WANDB_VAR
 
 LEARNING_RATE = 0.001 # 0.0001 slower
-BATCH_SIZE = 32 # above 16 runs out of memory
-EPOCHS = 1 # 3 Epochs takes about 7 hours
-BETA = 0.75
+BATCH_SIZE = 32 # 16 or lower to reduce memory usage
+EPOCHS = 1 # ILSVRC2017 Training Set has about half million images. Model training usually stablizes within 1 Epoch.
+BETA = 0.75 # Loss function parameter. Controls Secret and Detector contribution to loss.
 RESUME_EPOCH = 1 # Set to resume checkpoint's epoch number (ignored if = 1)
 RESUME_PATH = "saved_models/latest/model.pth" # Path to model.pth file to resume training
 
@@ -46,10 +50,17 @@ NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 # Set cpu number for loading data
 NUM_CPU = 1
 if os.cpu_count() > 12:
-    NUM_CPU = 2 # 2 used for each train, val, and test dataloader.
+    NUM_CPU = 3 # 3 used for each train, val, and test dataloader.
+
+# Trained Detector model path to load from
+# DETECTOR_PATH = Path("saved_models/20231002-201355/Test_Model_Detector_Epoch_5_FINAL.pth")
+DETECTOR_PATH = Path("Deep_Learning_Image_Steganography/Trained_Models/Detector/Detector_Model_V1.pth")
 
 # Set torch seed
 torch.manual_seed(42)
+
+# Set device type
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def train(load_model=False, load_path=""):
@@ -57,13 +68,7 @@ def train(load_model=False, load_path=""):
     batch_idx = 0
     epoch_idx = 1
 
-    # Set device type
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Device: {device}")
-
     data_path = Path("data/")
-    if not os.path.isdir('data/'):
-        data_path = Path("../data/")
     train_dir = data_path / "train"
     val_dir = data_path / "val"
     test_dir = data_path / "test"
@@ -85,13 +90,13 @@ def train(load_model=False, load_path=""):
     val_dataloader = get_val_dataloader(val_dir, BATCH_SIZE, NUM_CPU, NORMALIZE)
     test_dataloader = get_test_dataloader(test_dir, BATCH_SIZE, 1, NORMALIZE)
 
-
     my_custom_loss = MSE_and_SSIM_loss()
     test_model = CombinedNetwork()
     
     # optimizer = torch.optim.Adam(test_model.net_prep.parameters(), lr=LEARNING_RATE)
     optimizer = torch.optim.AdamW(list(test_model.net_prep.parameters()) + list(test_model.net_hide.parameters()), lr=LEARNING_RATE)
     optimizer_reveal = torch.optim.AdamW(test_model.net_reveal.parameters(), lr=LEARNING_RATE)
+
 
     if load_model:
         checkpoint = torch.load(load_path)
@@ -118,7 +123,6 @@ def train(load_model=False, load_path=""):
             loss=my_custom_loss,
             optimizer=optimizer,
             optimizer_reveal=optimizer_reveal,
-            device=device,
             batch_size=BATCH_SIZE,
             batch_idx=batch_idx,
             epoch_idx=epoch_idx,
@@ -131,7 +135,6 @@ def train(load_model=False, load_path=""):
         #     dataloader=train_dataloader,
         #     loss=my_custom_loss,
         #     optimizer=optimizer,
-        #     device=device,
         #     batch_size=BATCH_SIZE,
         #     batch_idx=batch_idx,
         #     epoch_idx=epoch_idx,
@@ -166,7 +169,7 @@ def train(load_model=False, load_path=""):
 
         # Save checkpoint after each epoch
         if SAVE_EPOCH_PROGRESS:
-            save_checkpoint(test_model, optimizer, optimizer_reveal, device, epoch_idx, batch_idx)
+            save_checkpoint(test_model, optimizer, optimizer_reveal, epoch_idx, batch_idx)
 
         epoch_idx += 1
     
@@ -295,7 +298,7 @@ def get_single_batch_into_image(train_dataloader):
 
     return img_cover, img_secret
 
-def test_plot_single_batch(img_cover, img_secret, test_model, device):
+def test_plot_single_batch(img_cover, img_secret, test_model):
 
     cuda_cover = img_cover.to(device)
     cuda_secret = img_secret.to(device)
@@ -350,15 +353,15 @@ class MSE_and_SSIM_loss(nn.Module):
         self.default_evaluator = Engine(eval_step)
         self.metric = SSIM(data_range=1.0)
         self.metric.attach(self.default_evaluator, 'ssim')
-
+        self.detector = load_model_detector()
 
 
     def forward(self, cover, secret, cover_original, secret_original):        
         cover_mse = self.loss_mse(input=cover, target=cover_original)
         secret_mse = self.loss_mse(input=secret, target=secret_original)
 
-        cover_ssim = self.default_evaluator.run([[cover, cover_original]])
-        secret_ssim = self.default_evaluator.run([[secret, secret_original]])
+        cover_ssim_ev = self.default_evaluator.run([[cover, cover_original]])
+        secret_ssim_ev = self.default_evaluator.run([[secret, secret_original]])
         
         # print(f"Cover SSIM: {1 - cover_ssim.metrics['ssim']}")
         # print(f"Secret SSIM: {1 - secret_ssim.metrics['ssim']}")
@@ -366,16 +369,46 @@ class MSE_and_SSIM_loss(nn.Module):
         # print(f"Cover MSE: {cover_loss}")
         # print(f"Secret MSE: {secret_loss}")
 
+        # Get Detector predictions on original and modified images
+        cover_pred = self.detector(cover)
+        cover_original_pred = self.detector(cover_original)
 
-        cover_loss = cover_mse + (1 - cover_ssim.metrics['ssim'])
-        secret_loss = secret_mse + (1 - secret_ssim.metrics['ssim'])
+        # print("cover_pred")
+        # print(cover_pred)
+        # print("cover_original")
+        # print(cover_original_pred)
+        bce_difference = torch.subtract(cover_original_pred,cover_pred)
+        # print("bce_difference")
+        # print(bce_difference)
+        bce_difference[bce_difference < 0] = 0
+        avg_bce_diff = torch.mean(bce_difference)
+        # print("avg_bce_diff")
+        # print(avg_bce_diff.item())
+        # print(avg_bce_diff.item()*100)
 
+        cover_ssim = (1 - cover_ssim_ev.metrics['ssim'])
+        secret_ssim = (1 - secret_ssim_ev.metrics['ssim'])
+
+        cover_loss = cover_mse + cover_ssim
+        secret_loss = secret_mse + secret_ssim
+        
+        combined_loss = cover_loss + (BETA * secret_loss) + (BETA *avg_bce_diff)
+        secret_loss_beta = BETA * secret_loss
+        
+        # print(f"cover_mse{cover_mse.item()}")
+        # print(f"cover_ssim{cover_ssim}")
         # print(f"Cover Loss: {cover_loss}")
         # print(f"Secret Loss: {secret_loss}")
-        
-        combined_loss = cover_loss + BETA * secret_loss
 
-        return combined_loss, cover_loss, (BETA * secret_loss), cover_mse, secret_mse, cover_ssim, secret_ssim
+        # Logging calculation for consistency when testing different loss ratios.
+        cover_loss_log = cover_mse + cover_ssim
+        secret_loss_log = secret_mse + secret_ssim
+        
+        combined_loss_log = cover_loss_log  + BETA * secret_loss_log
+        secret_loss_beta_log = (BETA * secret_loss_log)
+
+
+        return combined_loss, cover_loss, secret_loss_beta, cover_mse, secret_mse, cover_ssim, secret_ssim, combined_loss_log, cover_loss_log, secret_loss_beta_log, avg_bce_diff
 
 
 
@@ -401,7 +434,6 @@ def train_step(model: torch.nn.Module,
                loss: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                optimizer_reveal: torch.optim.Optimizer,
-               device,
                batch_size,
                batch_idx,
                epoch_idx,
@@ -431,7 +463,7 @@ def train_step(model: torch.nn.Module,
         model_covers, model_secrets = model(covers, secrets)
 
         # Calculate Loss
-        combined_loss,  c_loss, s_loss, c_mse, s_mse, c_ssim, s_ssim  = loss(model_covers, model_secrets, covers, secrets)
+        combined_loss,  c_loss, s_loss, c_mse, s_mse, c_ssim, s_ssim, combined_loss_log, c_loss_log, s_loss_log, avg_bce_diff = loss(model_covers, model_secrets, covers, secrets)
         # combined_loss = loss(model_covers, covers)
 
         # combined_loss_1, c_loss_1, s_loss_1 = custom_loss(model_covers, model_secrets, covers, secrets)
@@ -472,43 +504,45 @@ def train_step(model: torch.nn.Module,
         # log progress every 100 batches
         if not SKIP_WANDB and batch_idx % 100 == 0:
             wandb.log({#'train/batch': batch_idx,
-                    'train/batch_loss': combined_loss.item(),
-                    'train/batch_cover_loss': c_loss.item(),
-                    'train/batch_secret_loss': s_loss.item(),
-                    # 'train/batch_cover_mse': c_mse.item(),
-                    # 'train/batch_secret_mse': s_mse.item(),
-                    # 'train/batch_cover_ssim': 1-c_ssim.metrics['ssim'],
-                    # 'train/batch_secret_ssim': 1-s_ssim.metrics['ssim']
+                    'train/batch_loss': combined_loss_log.item(),
+                    'train/batch_cover_loss': c_loss_log.item(),
+                    'train/batch_secret_loss': s_loss_log.item(),
+                    'train/batch_avg_bce_diff': avg_bce_diff.item()*100,
+                    'train/batch_cover_mse': c_mse.item(),
+                    'train/batch_secret_mse': s_mse.item(),
+                    'train/batch_cover_ssim': c_ssim,
+                    'train/batch_secret_ssim': s_ssim,
                     })
             
             try:
                 validation_step(model, 
-                            iter_val_dataloader, 
-                            loss,
-                            device,
-                            batch_size,
-                            batch_idx)
+                                iter_val_dataloader, 
+                                loss,
+                                batch_size,
+                                batch_idx)
             
             except StopIteration:
                 iter_val_dataloader = iter(val_dataloader)
                 validation_step(model, 
-                            iter_val_dataloader, 
-                            loss,
-                            device,
-                            batch_size,
-                            batch_idx)
+                                iter_val_dataloader, 
+                                loss,
+                                batch_size,
+                                batch_idx)
             
             # if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
             #     if (batch_idx % 100 == 0 and batch_idx <= 1000):
             #         validation_step(model, 
             #                         val_dataloader, 
             #                         loss,
-            #                         device,
             #                         batch_size,
             #                         batch_idx)
             
-        
+        if SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0:
+            save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx)
+
         batch_idx += 1
+
+        break  # REMOVE WHEN TRAINING
 
 
     # Uncomment for wandb logging of average epoch error.
@@ -518,7 +552,6 @@ def train_step(model: torch.nn.Module,
 def validation_step(model: torch.nn.Module, 
                     dataloader, 
                     loss: torch.nn.Module,
-                    device,
                     batch_size,
                     batch_idx):
     
@@ -532,32 +565,36 @@ def validation_step(model: torch.nn.Module,
         secrets = b.to(device)
 
         model_covers, model_secrets = model(covers, secrets)
-        combined_loss,  c_loss, s_loss, c_mse, s_mse, c_ssim, s_ssim  = loss(model_covers, model_secrets, covers, secrets)
+        combined_loss,  c_loss, s_loss, c_mse, s_mse, c_ssim, s_ssim, combined_loss_log, c_loss_log, s_loss_log, avg_bce_diff = loss(model_covers, model_secrets, covers, secrets)
     
     # log progress every 100 batches
         if not SKIP_WANDB and batch_idx % 100 == 0:
             wandb.log({#'train/batch': batch_idx,
-                    'train/batch_loss_val': combined_loss.item(),
-                    'train/batch_cover_loss_val': c_loss.item(),
-                    'train/batch_secret_loss_val': s_loss.item(),
-                    # 'train/batch_cover_mse_val': c_mse.item(),
-                    # 'train/batch_secret_mse_val': s_mse.item(),
-                    # 'train/batch_cover_ssim_val': 1-c_ssim.metrics['ssim'],
-                    # 'train/batch_secret_ssim_val': 1-s_ssim.metrics['ssim']
+                    'train/batch_loss_val': combined_loss_log.item(),
+                    'train/batch_cover_loss_val': c_loss_log.item(),
+                    'train/batch_secret_loss_val': s_loss_log.item(),
+                    'train/batch_avg_bce_diff_val': avg_bce_diff.item()*100,
+                    'train/batch_cover_mse_val': c_mse.item(),
+                    'train/batch_secret_mse_val': s_mse.item(),
+                    'train/batch_cover_ssim_val': c_ssim,
+                    'train/batch_secret_ssim_val': s_ssim,
                     })
             
             if not SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES:
                 if (batch_idx % 100 == 0 and batch_idx <= 1000):
                     # Try plotting a batch of image fed to model.
-                    test_plot_single_batch(img_cover, img_secret, model, device)
-                elif batch_idx % 5000 == 0:
-                    test_plot_single_batch(img_cover, img_secret, model, device)
+                    test_plot_single_batch(img_cover, img_secret, model)
+                elif (batch_idx % 200 == 0 and batch_idx <= 3000):
+                    # Try plotting a batch of image fed to model.
+                    test_plot_single_batch(img_cover, img_secret, model)
+                elif (batch_idx % 1000 == 0 and batch_idx > 3000):
+                    test_plot_single_batch(img_cover, img_secret, model)
 
     # Turn training back on after eval finished
     model.train()
 
 
-def save_checkpoint(model, optimizer, optimizer_reveal, device, epoch_idx, batch_idx):
+def save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx):
     # Check if save model flag is active
         if SAVE_EPOCH_PROGRESS:
             timestamp = f'{time.strftime("%Y%m%d-%H%M%S")}'
@@ -582,7 +619,7 @@ def save_checkpoint(model, optimizer, optimizer_reveal, device, epoch_idx, batch
 
             # Try plotting a batch of image fed to model.
             global img_cover, img_secret
-            test_plot_single_batch(img_cover, img_secret, model, device)
+            test_plot_single_batch(img_cover, img_secret, model)
 
             global WANDB_VAR
             if WANDB_VAR != False:
@@ -590,35 +627,31 @@ def save_checkpoint(model, optimizer, optimizer_reveal, device, epoch_idx, batch
                 if not artifact_path.is_dir():
                     artifact_path.mkdir(parents=True)
                 
-                latest_model = "latest/model.pth"
-                latest_model_path = Path("saved_models") / latest_model
-                utils.save_model(model=save_state, model_name=latest_model)
+                # latest_model = "latest/model.pth"
+                latest_model_path = Path("saved_models") / model_name
+                # utils.save_model(model=save_state, model_name=latest_model)
                 artifact = wandb.Artifact(name='model', type='model')
                 artifact.add_file(latest_model_path)
                 WANDB_VAR.log_artifact(artifact)
 
 
 
-def model_detector_load_and_test(load_model_path = Path("saved_models/20231002-201355/Test_Model_Detector_Epoch_5_FINAL.pth"),
-                                 test_dir = Path("data/stega_dataset/test"),
-                                 test_batch_size = 100):
-    from sklearn.metrics import classification_report, ConfusionMatrixDisplay
-    import matplotlib.pyplot as plt
+def load_model_detector(load_model_path = DETECTOR_PATH):
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    test_dir = Path("data/stega_dataset/test")
-
-    model_detector = DetectNetwork()
-    
-    # optimizer_detector = torch.optim.AdamW(model_detector.parameters(), lr=LEARNING_RATE)
-
+    detector_model = DetectNetwork()
     checkpoint = torch.load(load_model_path)
-    model_detector.load_state_dict(checkpoint['model_state_dict'])
+    detector_model.load_state_dict(checkpoint['model_state_dict'])
+    # optimizer_detector = torch.optim.AdamW(model_detector.parameters(), lr=LEARNING_RATE)
     # optimizer_detector.load_state_dict(checkpoint['optimizer_state_dict'])
-    
-    model_detector.to(device)
+    detector_model.to(device)
+    detector_model.eval()
 
+    return detector_model
+
+
+def test_model_detector(test_dir = Path("data/stega_dataset/test"), test_batch_size = 1):
+    
+    detector_model = load_model_detector()
 
     test_dataloader = get_test_dataloader(test_dir, test_batch_size, 1, NORMALIZE)
 
@@ -628,11 +661,18 @@ def model_detector_load_and_test(load_model_path = Path("saved_models/20231002-2
         
         cover_labels = label_batch.unsqueeze(1).float()
 
-        label_pred = model_detector(covers)
+        label_pred = detector_model(covers)
 
         label_pred = label_pred.cpu()
 
         label_pred = torch.round(label_pred)
+        
+        # print(cover_labels)
+        # denorm = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+        #                           std=[1/0.229, 1/0.224, 1/0.225])
+        # cover_denorm = denorm(covers.cpu()).squeeze(0).permute(1, 2, 0)
+        # plt.imshow(cover_denorm)
+        # plt.show()
         
         # model_acc = accuracy_fn(y_true=cover_labels, y_pred=label_pred)
         # print(f"Accuracy = {model_acc}")
@@ -664,6 +704,8 @@ g.manual_seed(0)
 
 if __name__ == "__main__":
 
+    print(f"Device: {device}")
+
     global WANDB_VAR
     data_path = Path("data/")
     if not os.path.isdir('data/'):
@@ -672,6 +714,8 @@ if __name__ == "__main__":
     # test_plot_dataloader = get_test_dataloader((data_path / "test"), 2, 1)
     global img_cover, img_secret
     img_cover, img_secret = get_single_batch_into_image(test_plot_dataloader)
+
+    # test_model_detector()
 
     if SKIP_WANDB:
         WANDB_VAR = False
