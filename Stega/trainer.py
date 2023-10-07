@@ -90,7 +90,7 @@ def train(load_model=False, load_path=""):
     val_dataloader = get_val_dataloader(val_dir, BATCH_SIZE, NUM_CPU, NORMALIZE)
     test_dataloader = get_test_dataloader(test_dir, BATCH_SIZE, 1, NORMALIZE)
 
-    my_custom_loss = MSE_and_SSIM_loss()
+    my_custom_loss = MSE_and_SSIM_and_Detector_loss()
     test_model = CombinedNetwork()
     
     # optimizer = torch.optim.Adam(test_model.net_prep.parameters(), lr=LEARNING_RATE)
@@ -345,10 +345,10 @@ def custom_loss(cover, secret, cover_original, secret_original):
 def eval_step(engine, batch):
     return batch
 
-class MSE_and_SSIM_loss(nn.Module):
+class MSE_and_SSIM_and_Detector_loss(nn.Module):
     
     def __init__(self):
-        super(MSE_and_SSIM_loss, self).__init__()
+        super(MSE_and_SSIM_and_Detector_loss, self).__init__()
         self.loss_mse = torch.nn.MSELoss()
         self.default_evaluator = Engine(eval_step)
         self.metric = SSIM(data_range=1.0)
