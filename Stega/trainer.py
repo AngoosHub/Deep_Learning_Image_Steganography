@@ -37,7 +37,7 @@ SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = False # True to skip saving image s
 # WANDB_VAR
 
 LEARNING_RATE = 0.001 # 0.0001 slower
-BATCH_SIZE = 8 # lower to reduce memory usage
+BATCH_SIZE = 2 # lower to reduce memory usage
 EPOCHS = 1 # ILSVRC2017 Training Set has about half million images. Model training usually stablizes within 1 Epoch.
 BETA = 0.75 # Loss function parameter. Controls Secret and Detector contribution to loss.
 RESUME_EPOCH = 1 # Set to resume checkpoint's epoch number (ignored if = 1)
@@ -49,8 +49,8 @@ NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 
 # Set cpu number for loading data
 NUM_CPU = 1
-if os.cpu_count() > 12:
-    NUM_CPU = 2 # 2 used for each train, val, and test dataloader.
+# if os.cpu_count() > 12:
+#     NUM_CPU = 2 # 2 used for each train, val, and test dataloader.
 
 # Trained Detector model path to load from
 # DETECTOR_PATH = Path("saved_models/20231002-201355/Test_Model_Detector_Epoch_5_FINAL.pth")
@@ -389,8 +389,8 @@ class MSE_and_SSIM_and_Detector_loss(nn.Module):
         cover_ssim = (1 - cover_ssim_ev.metrics['ssim'])
         secret_ssim = (1 - secret_ssim_ev.metrics['ssim'])
 
-        cover_loss = cover_mse + cover_ssim
-        secret_loss = secret_mse + secret_ssim
+        cover_loss = cover_mse + (cover_ssim*3)
+        secret_loss = secret_mse + (secret_ssim*3)
         
         combined_loss = cover_loss + (BETA * secret_loss) + (BETA *avg_bce_diff)
         secret_loss_beta = BETA * secret_loss
@@ -537,9 +537,8 @@ def train_step(model: torch.nn.Module,
             #                         batch_size,
             #                         batch_idx)
             
-        if SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0 and batch_idx >= 5000:
+        if SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0 and batch_idx > 5000:
             save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx)
-            break
 
         batch_idx += 1
 
@@ -585,7 +584,7 @@ def validation_step(model: torch.nn.Module,
                 if (batch_idx % 100 == 0 and batch_idx <= 1000):
                     # Try plotting a batch of image fed to model.
                     test_plot_single_batch(img_cover, img_secret, model)
-                elif (batch_idx % 200 == 0 and batch_idx <= 3000):
+                elif (batch_idx % 500 == 0 and batch_idx <= 3000):
                     # Try plotting a batch of image fed to model.
                     test_plot_single_batch(img_cover, img_secret, model)
                 elif (batch_idx % 1000 == 0 and batch_idx > 3000):

@@ -15,6 +15,8 @@ from torchvision import transforms
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 old_model_path = Path("saved_models/old/Test_Model_Epoch_2.pth")
+model_V3_path = Path("saved_models/latest/Stega_Model_V3_(detector_V1).pth")
+MODEL_PATH = model_V3_path
 
 
 class MyDataset(IterableDataset):
@@ -128,7 +130,7 @@ def plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True):
 
 
 
-def get_model(model_path = old_model_path):
+def get_model(model_path = MODEL_PATH):
     # model_path = Path("saved_models/20230711-063730/Test_Model_Epoch_2.pth")
     checkpoint = torch.load(model_path)
 

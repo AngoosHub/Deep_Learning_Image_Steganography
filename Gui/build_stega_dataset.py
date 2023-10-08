@@ -3,29 +3,78 @@ from torchvision import datasets, transforms
 
 from image import *
 
+# Path to Imagenet training images. Place in "normal" folder to indicate original images.
+DATA_PATH = Path("data/stega_dataset/original/normal")
+# Path to save normal training images into.
+DATA_PATH_NORMAL = Path("data/stega_dataset/train/normal")
+# Path to save modified training images into.
+DATA_PATH_MODIFIED = Path("data/stega_dataset/train/modified")
+# Path to move validation images into.
+DATA_PATH_VAL = Path("data/stega_dataset/val")
+# Path to move test images into.
+DATA_PATH_TEST = Path("data/stega_dataset/test")
 
 
 def create_stega_database():
     
     model = get_model()
+    
 
-    data_path = Path("data/stega_dataset/original")
+    data_path = DATA_PATH
+    val_normal_path = DATA_PATH_VAL / "normal"
+    val_modified_path = DATA_PATH_VAL / "modified"
+    test_normal_path = DATA_PATH_TEST / "normal"
+    test_modified_path = DATA_PATH_TEST / "modified"
 
-    test_transform = transforms.Compose([
+    # Create dataset directory tree if does not exists.
+    if not DATA_PATH_NORMAL.is_dir():
+        DATA_PATH_NORMAL.mkdir(parents=True, exist_ok=True)
+    if not DATA_PATH_MODIFIED.is_dir():
+        DATA_PATH_MODIFIED.mkdir(parents=True, exist_ok=True)
+    if not DATA_PATH_VAL.is_dir():
+        DATA_PATH_VAL.mkdir(parents=True, exist_ok=True)
+    if not DATA_PATH_TEST.is_dir():
+        DATA_PATH_TEST.mkdir(parents=True, exist_ok=True)
+    if not val_normal_path.is_dir():
+        val_normal_path.mkdir(parents=True, exist_ok=True)
+    if not val_modified_path.is_dir():
+        val_modified_path.mkdir(parents=True, exist_ok=True)
+    if not test_normal_path.is_dir():
+        test_normal_path.mkdir(parents=True, exist_ok=True)
+    if not test_modified_path.is_dir():
+        test_modified_path.mkdir(parents=True, exist_ok=True)
+
+    normal_transform = transforms.Compose([
+        transforms.Resize(size=(224)),
+        transforms.CenterCrop(size=(224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+
+    secret_transform = transforms.Compose([
         transforms.Resize(size=(224)),
         transforms.CenterCrop(size=(224, 224)),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
     
-    test_dataset = datasets.ImageFolder(root=data_path,
-                                       transform=test_transform)
+    normal_dataset = datasets.ImageFolder(root=data_path,
+                                          transform=normal_transform)
     
-    test_dataloader = DataLoader(dataset=test_dataset, 
-                                 batch_size=2, 
-                                 num_workers=1,
-                                 shuffle=False,
-                                 drop_last=True)
+    secret_dataset = datasets.ImageFolder(root=data_path,
+                                          transform=secret_transform)
+    
+    normal_dataloader = DataLoader(dataset=normal_dataset, 
+                                   batch_size=1, 
+                                   num_workers=1,
+                                   shuffle=False,
+                                   drop_last=True)
+    
+    secret_dataloader = DataLoader(dataset=secret_dataset, 
+                                   batch_size=1, 
+                                   num_workers=1,
+                                   shuffle=True,
+                                   drop_last=True)
     
 
     denorm = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
@@ -33,13 +82,18 @@ def create_stega_database():
     pil_transfrom = transforms.ToPILImage()
     
     model.eval()
-
-    image_num = 0
+    image_num = 1
+    secret_iter = iter(secret_dataloader)
     
-    for index, (data, label) in enumerate(test_dataloader):
-        a, b = data.split(2//2,dim=0)
-        cuda_cover = a.to(device)
-        cuda_secret = b.to(device)
+    len(normal_dataloader)
+    # Split into 90% / 5% / 5% distribution
+    val_start = int(0.9 * len(image_names))
+    test_start = int(0.95 * len(image_names))
+
+    for index, (data, label) in enumerate(normal_dataloader):
+        
+        cuda_cover = data.to(device)
+        cuda_secret = next(secret_iter).to(device)
 
         with torch.inference_mode():
             modified_cover, recovered_secret = model(cuda_cover, cuda_secret)
@@ -59,14 +113,25 @@ def create_stega_database():
         # secret_denorm = denormalize_and_toPIL(secret)
         # secret_x_denorm = denormalize_and_toPIL(secret_x)
 
+        tensor_original_denorm = denorm(data.squeeze(0)).clamp(min=0, max=1)
+        cover_original_denorm = pil_transfrom(tensor_original_denorm)
+
         image_num_str = str(image_num).zfill(8)
-        cover_x_denorm.save(f"data/stega_dataset/train/Stega_{image_num_str}.JPEG")
+
+        if image_num > val_start:
+            cover_original_denorm.save(val_normal_path / "Normal_{image_num_str}.JPEG")
+            cover_x_denorm.save(val_modified_path / "Stega_{image_num_str}.JPEG")
+        elif image_num > test_start:
+            cover_original_denorm.save(test_normal_path / "Normal_{image_num_str}.JPEG")
+            cover_x_denorm.save(test_modified_path / "Stega_{image_num_str}.JPEG")
+        else:
+            cover_original_denorm.save(DATA_PATH_NORMAL / "Normal_{image_num_str}.JPEG")
+            cover_x_denorm.save(DATA_PATH_MODIFIED / "Stega_{image_num_str}.JPEG")
+
         image_num += 1
 
 
-
     print("Done")
-
 
 
 if __name__ == "__main__":
