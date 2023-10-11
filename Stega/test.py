@@ -8,6 +8,8 @@ from dataset_builder import DatasetBuilder
 from models import *
 from trainer import *
 
+import mse_ssim_detector_loss
+
 '''
 
 class TestDatasetBuilder(unittest.TestCase):
@@ -216,7 +218,7 @@ class TestTrainer(unittest.TestCase):
         self.val_dir = self.data_path / "tempval"
         self.test_dir = self.data_path / "temptest"
 
-        self.my_custom_loss = MSE_and_SSIM_loss()
+        self.my_custom_loss = mse_ssim_detector_loss.MSE_and_SSIM_and_Detector_loss()
 
     def test_get_train_dataloader(self):
 

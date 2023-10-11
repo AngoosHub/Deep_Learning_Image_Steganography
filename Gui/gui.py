@@ -27,9 +27,11 @@ def relative_to_assets_page3(path: str) -> Path:
     return ASSETS_PATH_PAGE3 / Path(path)
 
 
-class tkinterApp(Tk):
+class GUI(Tk):
+    '''
+    The main graphical user interface. Provides functionally for users to pick images and steganography models to hide or reveal images with them.
+    '''
      
-    # __init__ function for class tkinterApp
     def __init__(self, *args, **kwargs):
          
         # __init__ function for class Tk
@@ -572,7 +574,7 @@ def switch_page3(controller):
 
 
 def image_picker(canvas, image_on_canvas, imagelist):
-    path=filedialog.askopenfilename(filetypes=[("Image File",'*.JPEG')])
+    path=filedialog.askopenfilename(filetypes=[("Image File",'*.JPEG *.png')])
     # path=filedialog.askopenfilename(filetypes=(('Image File', '*.JPEG'),))
     
     # # add `, initialdir="..."` to set the initial directory shown in the dialog
@@ -643,11 +645,11 @@ def page2_cover_image_picker(canvas, image_on_canvas, self):
 
 
 def page1_hide_image_button_command():
-    hide_image(model=model, cover_o=page1_cover, secret_o=page1_secret)
+    StegaImageProcessing.hide_image(model=model, cover_o=page1_cover, secret_o=page1_secret)
 
 
 def page2_reveal_image_button_command():
-    reveal_image(model=model, cover_o=page2_cover, secret_o=page2_cover)
+    StegaImageProcessing.reveal_image(model=model, cover_o=page2_cover, secret_o=page2_cover)
 
 
 def model_picker(entry):
@@ -658,7 +660,7 @@ def model_picker(entry):
 
     global model
 
-    model = get_model(Path(path))
+    model = StegaImageProcessing.get_model(Path(path))
     return path, model
     # print(model)
 
@@ -678,12 +680,14 @@ def model_picker(entry):
 
 
 
-win = tkinterApp()
-# win = Tk()
-set_default_cover_secret_images()
+if __name__ == "__main__":
 
-win.geometry("862x519")
-win.configure(bg = "#3A7FF6")
-win.title("Deep Learning Image Steganography")
-win.resizable(False, False)
-win.mainloop()
+    win = GUI()
+    # win = Tk()
+    set_default_cover_secret_images()
+
+    win.geometry("862x519")
+    win.configure(bg = "#3A7FF6")
+    win.title("Deep Learning Image Steganography")
+    win.resizable(False, False)
+    win.mainloop()

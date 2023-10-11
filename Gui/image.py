@@ -15,11 +15,15 @@ from torchvision import transforms
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 old_model_path = Path("saved_models/old/Test_Model_Epoch_2.pth")
-model_V3_path = Path("saved_models/latest/Stega_Model_V3_(detector_V1).pth")
+# model_V3_path = Path("saved_models/latest/Stega_Model_V3_(detector_V1).pth")
+model_V3_path = Path("Deep_Learning_Image_Steganography/Trained_Models/Steganography/Stega_Model_V3_(detector_V1).pth")
 MODEL_PATH = model_V3_path
 
 
-class MyDataset(IterableDataset):
+class ImageDataset(IterableDataset):
+    '''
+    Wraps the user input cover and secret images as an Iterable Dataset to feed as input into steganography model.
+    '''
     def __init__(self, image_queue):
       self.queue = image_queue
 
@@ -33,327 +37,339 @@ class MyDataset(IterableDataset):
         return self.read_next_image()
 
 
-def hide_image(model, cover_o, secret_o):
+class StegaImageProcessing():
+    '''
+    A Utility class that handling various images processing, model output processing, matplotlib plotting functions
+    to support visuals displayed in GUI class.
+    '''
 
-    buffer = queue.Queue()
-    # new_input = Image.open(image_path)
+    @staticmethod
+    def hide_image(model, cover_o, secret_o):
 
-    # Populate queue with cover and secret
-    buffer.put(normalize_and_transform(cover_o))
-    buffer.put(normalize_and_transform(secret_o))
+        buffer = queue.Queue()
+        # new_input = Image.open(image_path)
 
-    dataset = MyDataset(buffer)
-    dataloader = torch.utils.data.DataLoader(dataset=dataset, 
-                                             batch_size=2,
-                                             shuffle=False)
+        # Populate queue with cover and secret
+        buffer.put(StegaImageProcessing.normalize_and_transform(cover_o))
+        buffer.put(StegaImageProcessing.normalize_and_transform(secret_o))
 
-    for data in dataloader:
-        a, b = data.split(2//2,dim=0)
-        cuda_cover = a.to(device)
-        cuda_secret = b.to(device)
+        dataset = ImageDataset(buffer)
+        dataloader = torch.utils.data.DataLoader(dataset=dataset, 
+                                                batch_size=2,
+                                                shuffle=False)
 
-        model.eval()
-        with torch.inference_mode():
-            modified_cover, recovered_secret = model(cuda_cover, cuda_secret)
+        for data in dataloader:
+            a, b = data.split(2//2,dim=0)
+            cuda_cover = a.to(device)
+            cuda_secret = b.to(device)
+
+            model.eval()
+            with torch.inference_mode():
+                modified_cover, recovered_secret = model(cuda_cover, cuda_secret)
+            
+            cover = cuda_cover.cpu().squeeze(0)
+            cover_x = modified_cover.cpu().squeeze(0)
+            secret = cuda_secret.cpu().squeeze(0)
+            secret_x = recovered_secret.cpu().squeeze(0)
+
+            # plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True)
+            StegaImageProcessing.test_plot(cover, cover_x, secret, secret_x, show_image=True)
+            break
+
+        return "Done"
+
+
+    @staticmethod
+    def normalize_and_transform(image):
+        data_transforms = transforms.Compose([
+            transforms.Resize(size=(224)),
+            transforms.CenterCrop(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ])
+        image_transform = data_transforms(image)
+        return image_transform
         
-        cover = cuda_cover.cpu().squeeze(0)
-        cover_x = modified_cover.cpu().squeeze(0)
-        secret = cuda_secret.cpu().squeeze(0)
-        secret_x = recovered_secret.cpu().squeeze(0)
 
-        # plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True)
-        test_plot(cover, cover_x, secret, secret_x, show_image=True)
-        break
-
-    return "Done"
+    @staticmethod
+    def denormalize_and_toPIL(tensor):
+        pil_transfrom = transforms.ToPILImage()
+        tensor_denorm = StegaImageProcessing.denormalize(tensor)
+        image = pil_transfrom(tensor_denorm)
+        return image
 
 
-def normalize_and_transform(image):
-    data_transforms = transforms.Compose([
-        transforms.Resize(size=(224)),
-        transforms.CenterCrop(size=(224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ])
-    image_transform = data_transforms(image)
-    return image_transform
-    
-
-def denormalize_and_toPIL(tensor):
-    pil_transfrom = transforms.ToPILImage()
-    tensor_denorm = denormalize(tensor)
-    image = pil_transfrom(tensor_denorm)
-    return image
+    @staticmethod
+    def denormalize(tensor):
+        denorm = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+                                    std=[1/0.229, 1/0.224, 1/0.225])
+        return denorm(tensor)
 
 
+    @staticmethod
+    def plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True):
+        # Denomralize and plot images for visual comparison.
 
-def denormalize(tensor):
-    denorm = transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
-                                  std=[1/0.229, 1/0.224, 1/0.225])
-    return denorm(tensor)
+        # for i, x in enumerate(X):
+        fig, ax = plt.subplots(2, 2)
+        # Note: permute() will change shape of image to suit matplotlib 
+        # (PyTorch default is [C, H, W] but Matplotlib is [H, W, C])
+        cover_denorm = StegaImageProcessing.denormalize(cover).permute(1, 2, 0)
+        ax[0,0].imshow(cover_denorm) 
+        ax[0,0].set_title(f"Original Cover")
+        ax[0,0].axis("off")
 
-
-def plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True):
-    # Denomralize and plot images for visual comparison.
-
-    # for i, x in enumerate(X):
-    fig, ax = plt.subplots(2, 2)
-    # Note: permute() will change shape of image to suit matplotlib 
-    # (PyTorch default is [C, H, W] but Matplotlib is [H, W, C])
-    cover_denorm = denormalize(cover).permute(1, 2, 0)
-    ax[0,0].imshow(cover_denorm) 
-    ax[0,0].set_title(f"Original Cover")
-    ax[0,0].axis("off")
-
-    cover_x_denorm = denormalize(cover_x).permute(1, 2, 0)
-    ax[0,1].imshow(cover_x_denorm) 
-    ax[0,1].set_title(f"Reconstructed Cover")
-    ax[0,1].axis("off")
+        cover_x_denorm = StegaImageProcessing.denormalize(cover_x).permute(1, 2, 0)
+        ax[0,1].imshow(cover_x_denorm) 
+        ax[0,1].set_title(f"Reconstructed Cover")
+        ax[0,1].axis("off")
 
 
-    secret_denorm = denormalize(secret).permute(1, 2, 0)
-    ax[1,0].imshow(secret_denorm) 
-    ax[1,0].set_title(f"Original Secret")
-    ax[1,0].axis("off")
+        secret_denorm = StegaImageProcessing.denormalize(secret).permute(1, 2, 0)
+        ax[1,0].imshow(secret_denorm) 
+        ax[1,0].set_title(f"Original Secret")
+        ax[1,0].axis("off")
 
-    secret_x_denorm = denormalize(secret_x).permute(1, 2, 0)
-    ax[1,1].imshow(secret_x_denorm) 
-    ax[1,1].set_title(f"Recovered Secret")
-    ax[1,1].axis("off")
+        secret_x_denorm = StegaImageProcessing.denormalize(secret_x).permute(1, 2, 0)
+        ax[1,1].imshow(secret_x_denorm) 
+        ax[1,1].set_title(f"Recovered Secret")
+        ax[1,1].axis("off")
 
-    fig.suptitle(f"Image Comparion", fontsize=16)
+        fig.suptitle(f"Image Comparion", fontsize=16)
 
-    if show_image:
-        plt.show()
-    
-    return fig
-
-
-
-def get_model(model_path = MODEL_PATH):
-    # model_path = Path("saved_models/20230711-063730/Test_Model_Epoch_2.pth")
-    checkpoint = torch.load(model_path)
-
-    if model_path.resolve() == old_model_path.resolve():
-        model = CombinedNetwork_Old()
-    else:
-        model = CombinedNetwork()
-    # optimizer = torch.optim.Adam(test_model.parameters(), lr=LEARNING_RATE)
-    
-    model.load_state_dict(checkpoint['model_state_dict'])
-    # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    # epoch_idx = checkpoint['epoch']
-    # batch_idx = checkpoint['batch']
-    return model.to(device)
-
-
-
-
-def test_plot(cover, cover_x, secret, secret_x, show_image=True):
-    
-    # cover = cover.clamp(min=0, max=1)
-    # cover_x = cover_x.clamp(min=0, max=1)
-    # secret = secret.clamp(min=0, max=1)
-    # secret_x = secret_x.clamp(min=0, max=1)
-    print(f"cover min: {torch.min(cover)} max: {torch.max(cover)}")
-    print(f"cover_x min: {torch.min(cover_x)} max: {torch.max(cover_x)}")
-    print(f"secret min: {torch.min(secret)} max: {torch.max(secret)}")
-    print(f"secret_x min: {torch.min(secret_x)} max: {torch.max(secret_x)}")
-
-    fig = pyplot.figure(figsize=(10, 20))
-
-    gs0 = gridspec.GridSpec(2, 1)
-    gs00 = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=gs0[0], wspace=0)
-    gs01 = gridspec.GridSpecFromSubplotSpec(2, 5, subplot_spec=gs0[1], wspace=0)
-
-    cover_denorm = denormalize(cover).permute(1, 2, 0)
-    cover_x_denorm = denormalize(cover_x).permute(1, 2, 0)
-    secret_denorm = denormalize(secret).permute(1, 2, 0)
-    secret_x_denorm = denormalize(secret_x).permute(1, 2, 0)
-
-    print(f"cover min: {torch.min(cover_denorm)} max: {torch.max(cover_denorm)}")
-    print(f"cover_x min: {torch.min(cover_x_denorm)} max: {torch.max(cover_x_denorm)}")
-    print(f"secret min: {torch.min(secret_denorm)} max: {torch.max(secret_denorm)}")
-    print(f"secret_x min: {torch.min(secret_x_denorm)} max: {torch.max(secret_x_denorm)}")
-
-    # plt.subplots_adjust(wspace=0, hspace=0)
-
-    # Image Comparison Section
-    gs00_ax00 = fig.add_subplot(gs00[0, 0])
-    gs00_ax00.imshow(cover_denorm) 
-    gs00_ax00.set_title(f"Original Cover")
-    gs00_ax00.axis("off")
-
-    gs00_ax01 = fig.add_subplot(gs00[0, 1])
-    gs00_ax01.imshow(cover_x_denorm) 
-    gs00_ax01.set_title(f"Reconstructed Cover")
-    gs00_ax01.axis("off")
-
-    gs00_ax10 = fig.add_subplot(gs00[1, 0])
-    gs00_ax10.imshow(secret_denorm) 
-    gs00_ax10.set_title(f"Original Secret")
-    gs00_ax10.axis("off")
-
-    gs00_ax11 = fig.add_subplot(gs00[1, 1])
-    gs00_ax11.imshow(secret_x_denorm) 
-    gs00_ax11.set_title(f"Recovered Secret")
-    gs00_ax11.axis("off")
-
-
-    # Residual Error Section
-    cover_error = np.abs(cover_x_denorm - cover_denorm)
-    secret_error = np.abs(secret_x_denorm - secret_denorm)
-    
-
-    gs01_ax00 = fig.add_subplot(gs01[0, 0])
-    gs01_ax00.imshow(cover_denorm) 
-    gs01_ax00.set_title(f"Cover")
-    gs01_ax00.axis("off")
-
-    gs01_ax01 = fig.add_subplot(gs01[0, 1])
-    gs01_ax01.imshow(cover_x_denorm) 
-    gs01_ax01.set_title(f"Re-Cover")
-    gs01_ax01.axis("off")
-
-    gs01_ax02 = fig.add_subplot(gs01[0, 2])
-    gs01_ax02.imshow(np.multiply(cover_error, 1.0))
-    gs01_ax02.set_title(f"Residual Error x1")
-    gs01_ax02.axis("off")
-
-    gs01_ax03 = fig.add_subplot(gs01[0, 3])
-    gs01_ax03.imshow(np.multiply(cover_error, 3.0))
-    gs01_ax03.set_title(f"Residual Error x3")
-    gs01_ax03.axis("off")
-
-    gs01_ax04 = fig.add_subplot(gs01[0, 4])
-    gs01_ax04.imshow(np.multiply(cover_error, 5.0))
-    gs01_ax04.set_title(f"Residual Error x5")
-    gs01_ax04.axis("off")
-
-    gs01_ax10 = fig.add_subplot(gs01[1, 0])
-    gs01_ax10.imshow(secret_denorm) 
-    gs01_ax10.set_title(f"Secret")
-    gs01_ax10.axis("off")
-
-    gs01_ax11 = fig.add_subplot(gs01[1, 1])
-    gs01_ax11.imshow(secret_x_denorm) 
-    gs01_ax11.set_title(f"Re-Secret")
-    gs01_ax11.axis("off")
-
-    gs01_ax12 = fig.add_subplot(gs01[1, 2])
-    gs01_ax12.imshow(np.multiply(secret_error, 1.0))
-    gs01_ax12.set_title(f"Residual Error x1")
-    gs01_ax12.axis("off")
-
-    gs01_ax13 = fig.add_subplot(gs01[1, 3])
-    gs01_ax13.imshow(np.multiply(secret_error, 3.0))
-    gs01_ax13.set_title(f"Residual Error x3")
-    gs01_ax13.axis("off")
-
-    gs01_ax14 = fig.add_subplot(gs01[1, 4])
-    gs01_ax14.imshow(np.multiply(secret_error, 5.0))
-    gs01_ax14.set_title(f"Residual Error x5")
-    gs01_ax14.axis("off")
-
-
-    fig.suptitle(f"Image Comparison", fontsize=16)
-
-    if show_image:
-        plt.show()
-    
-    return fig
-
-
-def reveal_image(model, cover_o, secret_o):
-
-    buffer = queue.Queue()
-    # new_input = Image.open(image_path)
-
-    # Populate queue with cover and secret
-    buffer.put(normalize_and_transform(cover_o))
-    buffer.put(normalize_and_transform(secret_o))
-
-    dataset = MyDataset(buffer)
-    dataloader = torch.utils.data.DataLoader(dataset=dataset, 
-                                             batch_size=2,
-                                             shuffle=False)
-
-    for data in dataloader:
-        a, b = data.split(2//2,dim=0)
-        cuda_cover = a.to(device)
-        cuda_secret = b.to(device)
-
-        model.eval()
-        with torch.inference_mode():
-            recovered_secret = model.reveal_only(secret_tensor=cuda_secret)
+        if show_image:
+            plt.show()
         
-        # cover = cuda_cover.cpu().squeeze(0)
-        # cover_x = modified_cover.cpu().squeeze(0)
-        secret = cuda_secret.cpu().squeeze(0)
-        secret_x = recovered_secret.cpu().squeeze(0)
-
-        test_plot_reveal(secret, secret_x, show_image=True)
-        break
-
-    return "Done"
-
-def test_plot_reveal(secret, secret_x, show_image=True):
-    
-    fig = pyplot.figure(figsize=(10, 20))
-
-    gs0 = gridspec.GridSpec(2, 1)
-    gs00 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs0[0], wspace=0)
-    gs01 = gridspec.GridSpecFromSubplotSpec(1, 5, subplot_spec=gs0[1], wspace=0)
-
-    secret_denorm = denormalize(secret).permute(1, 2, 0)
-    secret_x_denorm = denormalize(secret_x).permute(1, 2, 0)
+        return fig
 
 
-    # Image Comparison Section
-    gs00_ax00 = fig.add_subplot(gs00[0, 0])
-    gs00_ax00.imshow(secret_denorm)   
-    gs00_ax00.set_title(f"Original Secret")
-    gs00_ax00.axis("off")
+    @staticmethod
+    def get_model(model_path = MODEL_PATH):
+        checkpoint = torch.load(model_path)
 
-    gs00_ax01 = fig.add_subplot(gs00[0, 1])
-    gs00_ax01.imshow(secret_x_denorm) 
-    gs00_ax01.set_title(f"Recovered Secret")
-    gs00_ax01.axis("off")
-
-
-    # Residual Error Section
-    secret_error = np.abs(secret_x_denorm - secret_denorm)
-
-    gs01_ax00 = fig.add_subplot(gs01[0, 0])
-    gs01_ax00.imshow(secret_denorm) 
-    gs01_ax00.set_title(f"Secret")
-    gs01_ax00.axis("off")
-
-    gs01_ax01 = fig.add_subplot(gs01[0, 1])
-    gs01_ax01.imshow(secret_x_denorm)
-    gs01_ax01.set_title(f"Re-Secret")
-    gs01_ax01.axis("off")
-
-    gs01_ax02 = fig.add_subplot(gs01[0, 2])
-    gs01_ax02.imshow(np.multiply(secret_error, 1.0))
-    gs01_ax02.set_title(f"Residual Error x1")
-    gs01_ax02.axis("off")
-
-    gs01_ax03 = fig.add_subplot(gs01[0, 3])
-    gs01_ax03.imshow(np.multiply(secret_error, 3.0))
-    gs01_ax03.set_title(f"Residual Error x3")
-    gs01_ax03.axis("off")
-
-    gs01_ax04 = fig.add_subplot(gs01[0, 4])
-    gs01_ax04.imshow(np.multiply(secret_error, 5.0))
-    gs01_ax04.set_title(f"Residual Error x5")
-    gs01_ax04.axis("off")
+        if model_path.resolve() == old_model_path.resolve():
+            model = CombinedNetwork_Old()
+        else:
+            model = CombinedNetwork()
+        # optimizer = torch.optim.Adam(test_model.parameters(), lr=LEARNING_RATE)
+        
+        model.load_state_dict(checkpoint['model_state_dict'])
+        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # epoch_idx = checkpoint['epoch']
+        # batch_idx = checkpoint['batch']
+        return model.to(device)
 
 
-    fig.suptitle(f"Image Comparison", fontsize=16)
 
-    if show_image:
-        plt.show()
+    @staticmethod
+    def test_plot(cover, cover_x, secret, secret_x, show_image=True):
+        
+        # cover = cover.clamp(min=0, max=1)
+        # cover_x = cover_x.clamp(min=0, max=1)
+        # secret = secret.clamp(min=0, max=1)
+        # secret_x = secret_x.clamp(min=0, max=1)
+        print(f"cover min: {torch.min(cover)} max: {torch.max(cover)}")
+        print(f"cover_x min: {torch.min(cover_x)} max: {torch.max(cover_x)}")
+        print(f"secret min: {torch.min(secret)} max: {torch.max(secret)}")
+        print(f"secret_x min: {torch.min(secret_x)} max: {torch.max(secret_x)}")
+
+        fig = pyplot.figure(figsize=(10, 20))
+
+        gs0 = gridspec.GridSpec(2, 1)
+        gs00 = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=gs0[0], wspace=0)
+        gs01 = gridspec.GridSpecFromSubplotSpec(2, 5, subplot_spec=gs0[1], wspace=0)
+
+        cover_denorm = StegaImageProcessing.denormalize(cover).permute(1, 2, 0)
+        cover_x_denorm = StegaImageProcessing.denormalize(cover_x).permute(1, 2, 0)
+        secret_denorm = StegaImageProcessing.denormalize(secret).permute(1, 2, 0)
+        secret_x_denorm = StegaImageProcessing.denormalize(secret_x).permute(1, 2, 0)
+
+        print(f"cover min: {torch.min(cover_denorm)} max: {torch.max(cover_denorm)}")
+        print(f"cover_x min: {torch.min(cover_x_denorm)} max: {torch.max(cover_x_denorm)}")
+        print(f"secret min: {torch.min(secret_denorm)} max: {torch.max(secret_denorm)}")
+        print(f"secret_x min: {torch.min(secret_x_denorm)} max: {torch.max(secret_x_denorm)}")
+
+        # plt.subplots_adjust(wspace=0, hspace=0)
+
+        # Image Comparison Section
+        gs00_ax00 = fig.add_subplot(gs00[0, 0])
+        gs00_ax00.imshow(cover_denorm) 
+        gs00_ax00.set_title(f"Original Cover")
+        gs00_ax00.axis("off")
+
+        gs00_ax01 = fig.add_subplot(gs00[0, 1])
+        gs00_ax01.imshow(cover_x_denorm) 
+        gs00_ax01.set_title(f"Reconstructed Cover")
+        gs00_ax01.axis("off")
+
+        gs00_ax10 = fig.add_subplot(gs00[1, 0])
+        gs00_ax10.imshow(secret_denorm) 
+        gs00_ax10.set_title(f"Original Secret")
+        gs00_ax10.axis("off")
+
+        gs00_ax11 = fig.add_subplot(gs00[1, 1])
+        gs00_ax11.imshow(secret_x_denorm) 
+        gs00_ax11.set_title(f"Recovered Secret")
+        gs00_ax11.axis("off")
+
+
+        # Residual Error Section
+        cover_error = np.abs(cover_x_denorm - cover_denorm)
+        secret_error = np.abs(secret_x_denorm - secret_denorm)
+        
+
+        gs01_ax00 = fig.add_subplot(gs01[0, 0])
+        gs01_ax00.imshow(cover_denorm) 
+        gs01_ax00.set_title(f"Cover")
+        gs01_ax00.axis("off")
+
+        gs01_ax01 = fig.add_subplot(gs01[0, 1])
+        gs01_ax01.imshow(cover_x_denorm) 
+        gs01_ax01.set_title(f"Re-Cover")
+        gs01_ax01.axis("off")
+
+        gs01_ax02 = fig.add_subplot(gs01[0, 2])
+        gs01_ax02.imshow(np.multiply(cover_error, 1.0))
+        gs01_ax02.set_title(f"Residual Error x1")
+        gs01_ax02.axis("off")
+
+        gs01_ax03 = fig.add_subplot(gs01[0, 3])
+        gs01_ax03.imshow(np.multiply(cover_error, 3.0))
+        gs01_ax03.set_title(f"Residual Error x3")
+        gs01_ax03.axis("off")
+
+        gs01_ax04 = fig.add_subplot(gs01[0, 4])
+        gs01_ax04.imshow(np.multiply(cover_error, 5.0))
+        gs01_ax04.set_title(f"Residual Error x5")
+        gs01_ax04.axis("off")
+
+        gs01_ax10 = fig.add_subplot(gs01[1, 0])
+        gs01_ax10.imshow(secret_denorm) 
+        gs01_ax10.set_title(f"Secret")
+        gs01_ax10.axis("off")
+
+        gs01_ax11 = fig.add_subplot(gs01[1, 1])
+        gs01_ax11.imshow(secret_x_denorm) 
+        gs01_ax11.set_title(f"Re-Secret")
+        gs01_ax11.axis("off")
+
+        gs01_ax12 = fig.add_subplot(gs01[1, 2])
+        gs01_ax12.imshow(np.multiply(secret_error, 1.0))
+        gs01_ax12.set_title(f"Residual Error x1")
+        gs01_ax12.axis("off")
+
+        gs01_ax13 = fig.add_subplot(gs01[1, 3])
+        gs01_ax13.imshow(np.multiply(secret_error, 3.0))
+        gs01_ax13.set_title(f"Residual Error x3")
+        gs01_ax13.axis("off")
+
+        gs01_ax14 = fig.add_subplot(gs01[1, 4])
+        gs01_ax14.imshow(np.multiply(secret_error, 5.0))
+        gs01_ax14.set_title(f"Residual Error x5")
+        gs01_ax14.axis("off")
+
+
+        fig.suptitle(f"Image Comparison", fontsize=16)
+
+        if show_image:
+            plt.show()
+        
+        return fig
+
+
+    @staticmethod
+    def reveal_image(model, cover_o, secret_o):
+
+        buffer = queue.Queue()
+        # new_input = Image.open(image_path)
+
+        # Populate queue with cover and secret
+        buffer.put(StegaImageProcessing.normalize_and_transform(cover_o))
+        buffer.put(StegaImageProcessing.normalize_and_transform(secret_o))
+
+        dataset = ImageDataset(buffer)
+        dataloader = torch.utils.data.DataLoader(dataset=dataset, 
+                                                batch_size=2,
+                                                shuffle=False)
+
+        for data in dataloader:
+            a, b = data.split(2//2,dim=0)
+            cuda_cover = a.to(device)
+            cuda_secret = b.to(device)
+
+            model.eval()
+            with torch.inference_mode():
+                recovered_secret = model.reveal_only(secret_tensor=cuda_secret)
+            
+            # cover = cuda_cover.cpu().squeeze(0)
+            # cover_x = modified_cover.cpu().squeeze(0)
+            secret = cuda_secret.cpu().squeeze(0)
+            secret_x = recovered_secret.cpu().squeeze(0)
+
+            StegaImageProcessing.test_plot_reveal(secret, secret_x, show_image=True)
+            break
+
+        return "Done"
+
+
+    @staticmethod
+    def test_plot_reveal(secret, secret_x, show_image=True):
+        
+        fig = pyplot.figure(figsize=(10, 20))
+
+        gs0 = gridspec.GridSpec(2, 1)
+        gs00 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs0[0], wspace=0)
+        gs01 = gridspec.GridSpecFromSubplotSpec(1, 5, subplot_spec=gs0[1], wspace=0)
+
+        secret_denorm = StegaImageProcessing.denormalize(secret).permute(1, 2, 0)
+        secret_x_denorm = StegaImageProcessing.denormalize(secret_x).permute(1, 2, 0)
+
+
+        # Image Comparison Section
+        gs00_ax00 = fig.add_subplot(gs00[0, 0])
+        gs00_ax00.imshow(secret_denorm)   
+        gs00_ax00.set_title(f"Original Secret")
+        gs00_ax00.axis("off")
+
+        gs00_ax01 = fig.add_subplot(gs00[0, 1])
+        gs00_ax01.imshow(secret_x_denorm) 
+        gs00_ax01.set_title(f"Recovered Secret")
+        gs00_ax01.axis("off")
+
+
+        # Residual Error Section
+        secret_error = np.abs(secret_x_denorm - secret_denorm)
+
+        gs01_ax00 = fig.add_subplot(gs01[0, 0])
+        gs01_ax00.imshow(secret_denorm) 
+        gs01_ax00.set_title(f"Secret")
+        gs01_ax00.axis("off")
+
+        gs01_ax01 = fig.add_subplot(gs01[0, 1])
+        gs01_ax01.imshow(secret_x_denorm)
+        gs01_ax01.set_title(f"Re-Secret")
+        gs01_ax01.axis("off")
+
+        gs01_ax02 = fig.add_subplot(gs01[0, 2])
+        gs01_ax02.imshow(np.multiply(secret_error, 1.0))
+        gs01_ax02.set_title(f"Residual Error x1")
+        gs01_ax02.axis("off")
+
+        gs01_ax03 = fig.add_subplot(gs01[0, 3])
+        gs01_ax03.imshow(np.multiply(secret_error, 3.0))
+        gs01_ax03.set_title(f"Residual Error x3")
+        gs01_ax03.axis("off")
+
+        gs01_ax04 = fig.add_subplot(gs01[0, 4])
+        gs01_ax04.imshow(np.multiply(secret_error, 5.0))
+        gs01_ax04.set_title(f"Residual Error x5")
+        gs01_ax04.axis("off")
+
+
+        fig.suptitle(f"Image Comparison", fontsize=16)
+
+        if show_image:
+            plt.show()
     
 
 import sys
@@ -363,7 +379,7 @@ from models_old import CombinedNetwork_Old
 
 cover = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/page1/image_1.png")).convert('RGB')
 secret = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/page1/image_2.png")).convert('RGB')
-model = get_model()
+model = StegaImageProcessing.get_model()
 
 # def hide_image_command():
 #     hide_image(model=model, cover=cover, secret=secret)
@@ -389,8 +405,8 @@ if __name__ == "__main__":
     #     image_denorm = denormalize_and_toPIL(image_tensor)
     #     image_denorm.show()
 
-    model = get_model()
-    hide_image(model, cover, secret)
+    model = StegaImageProcessing.get_model()
+    StegaImageProcessing.hide_image(model, cover, secret)
 
 
 
