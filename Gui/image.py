@@ -6,10 +6,12 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib import pyplot
 import numpy as np
+import time
 
 from torch.utils.data import IterableDataset
 import queue
 from torchvision import transforms
+from torchvision.utils import save_image
 
 
 
@@ -18,6 +20,8 @@ old_model_path = Path("saved_models/old/Test_Model_Epoch_2.pth")
 # model_V3_path = Path("saved_models/latest/Stega_Model_V3_(detector_V1).pth")
 model_V3_path = Path("Deep_Learning_Image_Steganography/Trained_Models/Steganography/Stega_Model_V3_(detector_V1).pth")
 MODEL_PATH = model_V3_path
+COVER_SAVE_PATH = "Deep_Learning_Image_Steganography/Saved_Images/Modified_Cover"
+SECRET_SAVE_PATH = "Deep_Learning_Image_Steganography/Saved_Images/Revealed_Secret"
 
 
 class ImageDataset(IterableDataset):
@@ -72,8 +76,17 @@ class StegaImageProcessing():
             secret = cuda_secret.cpu().squeeze(0)
             secret_x = recovered_secret.cpu().squeeze(0)
 
+            # Save modified cover image
+            if not Path(COVER_SAVE_PATH).is_dir():
+                Path(COVER_SAVE_PATH).mkdir(parents=True, exist_ok=True)
+            # img = Image.fromarray(modified_cover.cpu().detach().numpy()[0])
+            timestamp = f'{time.strftime("%Y%m%d-%H%M%S")}'
+            # img.save(COVER_SAVE_PATH / f"Stega_{timestamp}.png")
+            save_image(StegaImageProcessing.denormalize(modified_cover.cpu()), f'{COVER_SAVE_PATH}/Stega_{timestamp}.png')
+
             # plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True)
             StegaImageProcessing.test_plot(cover, cover_x, secret, secret_x, show_image=True)
+
             break
 
         return "Done"
@@ -306,6 +319,14 @@ class StegaImageProcessing():
             secret = cuda_secret.cpu().squeeze(0)
             secret_x = recovered_secret.cpu().squeeze(0)
 
+            # Save modified cover image
+            if not Path(SECRET_SAVE_PATH).is_dir():
+                Path(SECRET_SAVE_PATH).mkdir(parents=True, exist_ok=True)
+            # img = Image.fromarray(modified_cover.cpu().detach().numpy()[0])
+            timestamp = f'{time.strftime("%Y%m%d-%H%M%S")}'
+            # img.save(COVER_SAVE_PATH / f"Stega_{timestamp}.png")
+            save_image(StegaImageProcessing.denormalize(recovered_secret.cpu()), f'{SECRET_SAVE_PATH}/Secret_{timestamp}.png')
+
             StegaImageProcessing.test_plot_reveal(secret, secret_x, show_image=True)
             break
 
@@ -318,55 +339,61 @@ class StegaImageProcessing():
         fig = pyplot.figure(figsize=(10, 20))
 
         gs0 = gridspec.GridSpec(2, 1)
-        gs00 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs0[0], wspace=0)
+        # gs00 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs0[0], wspace=0)
+        gs00 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gs0[0], wspace=0)
         gs01 = gridspec.GridSpecFromSubplotSpec(1, 5, subplot_spec=gs0[1], wspace=0)
 
         secret_denorm = StegaImageProcessing.denormalize(secret).permute(1, 2, 0)
         secret_x_denorm = StegaImageProcessing.denormalize(secret_x).permute(1, 2, 0)
 
 
-        # Image Comparison Section
         gs00_ax00 = fig.add_subplot(gs00[0, 0])
-        gs00_ax00.imshow(secret_denorm)   
-        gs00_ax00.set_title(f"Original Secret")
+        gs00_ax00.imshow(secret_x_denorm)   
+        gs00_ax00.set_title(f"Recovered Secret")
         gs00_ax00.axis("off")
 
-        gs00_ax01 = fig.add_subplot(gs00[0, 1])
-        gs00_ax01.imshow(secret_x_denorm) 
-        gs00_ax01.set_title(f"Recovered Secret")
-        gs00_ax01.axis("off")
+        # # Image Comparison Section
+        # gs00_ax00 = fig.add_subplot(gs00[0, 0])
+        # gs00_ax00.imshow(secret_denorm)   
+        # gs00_ax00.set_title(f"Original Secret")
+        # gs00_ax00.axis("off")
+
+        # gs00_ax01 = fig.add_subplot(gs00[0, 1])
+        # gs00_ax01.imshow(secret_x_denorm) 
+        # gs00_ax01.set_title(f"Recovered Secret")
+        # gs00_ax01.axis("off")
 
 
-        # Residual Error Section
-        secret_error = np.abs(secret_x_denorm - secret_denorm)
+        # # Residual Error Section
+        # secret_error = np.abs(secret_x_denorm - secret_denorm)
 
-        gs01_ax00 = fig.add_subplot(gs01[0, 0])
-        gs01_ax00.imshow(secret_denorm) 
-        gs01_ax00.set_title(f"Secret")
-        gs01_ax00.axis("off")
+        # gs01_ax00 = fig.add_subplot(gs01[0, 0])
+        # gs01_ax00.imshow(secret_denorm) 
+        # gs01_ax00.set_title(f"Secret")
+        # gs01_ax00.axis("off")
 
-        gs01_ax01 = fig.add_subplot(gs01[0, 1])
-        gs01_ax01.imshow(secret_x_denorm)
-        gs01_ax01.set_title(f"Re-Secret")
-        gs01_ax01.axis("off")
+        # gs01_ax01 = fig.add_subplot(gs01[0, 1])
+        # gs01_ax01.imshow(secret_x_denorm)
+        # gs01_ax01.set_title(f"Re-Secret")
+        # gs01_ax01.axis("off")
 
-        gs01_ax02 = fig.add_subplot(gs01[0, 2])
-        gs01_ax02.imshow(np.multiply(secret_error, 1.0))
-        gs01_ax02.set_title(f"Residual Error x1")
-        gs01_ax02.axis("off")
+        # gs01_ax02 = fig.add_subplot(gs01[0, 2])
+        # gs01_ax02.imshow(np.multiply(secret_error, 1.0))
+        # gs01_ax02.set_title(f"Residual Error x1")
+        # gs01_ax02.axis("off")
 
-        gs01_ax03 = fig.add_subplot(gs01[0, 3])
-        gs01_ax03.imshow(np.multiply(secret_error, 3.0))
-        gs01_ax03.set_title(f"Residual Error x3")
-        gs01_ax03.axis("off")
+        # gs01_ax03 = fig.add_subplot(gs01[0, 3])
+        # gs01_ax03.imshow(np.multiply(secret_error, 3.0))
+        # gs01_ax03.set_title(f"Residual Error x3")
+        # gs01_ax03.axis("off")
 
-        gs01_ax04 = fig.add_subplot(gs01[0, 4])
-        gs01_ax04.imshow(np.multiply(secret_error, 5.0))
-        gs01_ax04.set_title(f"Residual Error x5")
-        gs01_ax04.axis("off")
+        # gs01_ax04 = fig.add_subplot(gs01[0, 4])
+        # gs01_ax04.imshow(np.multiply(secret_error, 5.0))
+        # gs01_ax04.set_title(f"Residual Error x5")
+        # gs01_ax04.axis("off")
 
 
-        fig.suptitle(f"Image Comparison", fontsize=16)
+        # fig.suptitle(f"Image Comparison", fontsize=16)
 
         if show_image:
             plt.show()
