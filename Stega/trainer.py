@@ -186,8 +186,6 @@ if __name__ == "__main__":
             "epochs": EPOCHS,
             "batch_size": BATCH_SIZE,
             }) as wandb_run:
-            # load_path = Path("saved_models") / "20230707-131247" / "Test_Model_Epoch_5_FINAL.pth"
-            # train(load_model=True, load_path=load_path)
             WANDB_VAR = wandb_run
             arg_paser_trainer_type()
 

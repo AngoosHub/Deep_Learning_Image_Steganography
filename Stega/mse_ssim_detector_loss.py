@@ -27,7 +27,6 @@ class MSE_and_SSIM_and_Detector_loss(nn.Module):
         secret_mse = self.loss_mse(input=secret, target=secret_original)
 
         cover_ssim_ev = self.default_evaluator.run([[cover, cover_original]])
-        secret_ssim_ev = self.default_evaluator.run([[secret, secret_original]])
         
         # print(f"Cover SSIM: {1 - cover_ssim.metrics['ssim']}")
         # print(f"Secret SSIM: {1 - secret_ssim.metrics['ssim']}")
@@ -53,6 +52,7 @@ class MSE_and_SSIM_and_Detector_loss(nn.Module):
         # print(avg_bce_diff.item()*100)
 
         cover_ssim = (1 - cover_ssim_ev.metrics['ssim'])
+        secret_ssim_ev = self.default_evaluator.run([[secret, secret_original]])
         secret_ssim = (1 - secret_ssim_ev.metrics['ssim'])
 
         cover_loss = cover_mse + (cover_ssim*3)

@@ -4,17 +4,17 @@ from pathlib import Path
 from tkinter import *
 from PIL import Image, ImageTk
 from tkinter import filedialog, ttk
-import math
 
+from contoller import *
 from image import *
 
 # Explicit imports to satisfy Flake8
 # from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage
 
 
-ASSETS_PATH_PAGE1 = Path("Deep_Learning_Image_Steganography/Gui/assets/page1")
-ASSETS_PATH_PAGE2 = Path("Deep_Learning_Image_Steganography/Gui/assets/page2")
-ASSETS_PATH_PAGE3 = Path("Deep_Learning_Image_Steganography/Gui/assets/page3")
+ASSETS_PATH_PAGE1 = Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage")
+ASSETS_PATH_PAGE2 = Path("Deep_Learning_Image_Steganography/Gui/assets/RevealImagePage")
+ASSETS_PATH_PAGE3 = Path("Deep_Learning_Image_Steganography/Gui/assets/LoadModelPage")
 
 
 def relative_to_assets_page1(path: str) -> Path:
@@ -46,24 +46,29 @@ class GUI(Tk):
   
         # initializing frames to an empty array
         self.frames = {} 
+        
+        self.hide_page_controller = HideImagePageController(controller=self, cover=cover, secret=secret)
+        self.reveal_page_controller = RevealImagePageController(controller=self, secret=secret)
+        self.load_page_controller = LoadModelPageController(controller=self)
   
-        self.frames["Page1"] = Page1(parent=container, controller=self)
-        self.frames["Page2"] = Page2(parent=container, controller=self)
-        self.frames["Page3"] = Page3(parent=container, controller=self)
+        self.frames["HideImagePage"] = HideImagePage(parent=container, controller=self.hide_page_controller)
+        self.frames["RevealImagePage"] = RevealImagePage(parent=container, controller=self.reveal_page_controller)
+        self.frames["LoadModelPage"] = LoadModelPage(parent=container, controller=self.load_page_controller)
 
-        self.frames["Page1"].grid(row=0, column=0, sticky="nsew")
-        self.frames["Page2"].grid(row=0, column=0, sticky="nsew")
-        self.frames["Page3"].grid(row=0, column=0, sticky="nsew")
+
+        self.frames["HideImagePage"].grid(row=0, column=0, sticky="nsew")
+        self.frames["RevealImagePage"].grid(row=0, column=0, sticky="nsew")
+        self.frames["LoadModelPage"].grid(row=0, column=0, sticky="nsew")
   
-        self.show_frame("Page1")
+        self.show_frame("HideImagePage")
   
     # to display the current frame passed as
     # parameter
-    def show_frame(self, cont):
-        frame = self.frames[cont]
+    def show_frame(self, page_name):
+        frame = self.frames[page_name]
         frame.tkraise()
 
-class Page1(Frame):
+class HideImagePage(Frame):
      
     def __init__(self, parent, controller):
         self.controller = controller
@@ -94,7 +99,7 @@ class Page1(Frame):
             image=self.button_image_1,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: page1_cover_secret_image_picker(self.canvas, self.image_1, self.imagelist, False),
+            command=lambda: self.controller.cover_secret_image_picker(self.canvas, self.image_1, self.imagelist, False),
             relief="flat"
         )
         self.button_1.place(
@@ -110,7 +115,7 @@ class Page1(Frame):
             image=self.button_image_2,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: page1_hide_image_button_command(),
+            command=lambda:self.controller.hide_image_button_command(),
             relief="flat"
         )
         self.button_2.place(
@@ -136,7 +141,7 @@ class Page1(Frame):
             image=self.button_image_3,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: page1_cover_secret_image_picker(self.canvas, self.image_2, self.imagelist, True),
+            command=lambda: self.controller.cover_secret_image_picker(self.canvas, self.image_2, self.imagelist, True),
             relief="flat"
         )
         self.button_3.place(
@@ -185,7 +190,7 @@ class Page1(Frame):
             image=self.button_image_4,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page1(self.controller),
+            command=lambda: self.controller.switch_hide_image_page(),
             relief="flat"
         )
         self.button_4.place(
@@ -202,7 +207,7 @@ class Page1(Frame):
             image=self.button_image_5,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page2(self.controller),
+            command=lambda: self.controller.switch_reveal_image_page(),
             relief="flat"
         )
         self.button_5.place(
@@ -219,7 +224,7 @@ class Page1(Frame):
             image=self.button_image_6,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page3(self.controller),
+            command=lambda: self.controller.switch_load_model_page(),
             relief="flat"
         )
         self.button_6.place(
@@ -230,7 +235,7 @@ class Page1(Frame):
         )
 
         self.image_image_1 = PhotoImage(
-            file=relative_to_assets_page1("image_1.png"))
+            file=relative_to_assets_page1("image_2.png"))
         self.image_1 = self.canvas.create_image(
             686.0,
             247.0,
@@ -238,14 +243,19 @@ class Page1(Frame):
         )
 
         self.image_image_2 = PhotoImage(
-            file=relative_to_assets_page1("image_2.png"))
+            file=relative_to_assets_page1("image_1.png"))
         self.image_2 = self.canvas.create_image(
             391.0,
             249.0,
             image=self.image_image_2
         )
 
-class Page2(Frame):
+        self.resize_warning_1 = self.canvas.create_text((686.0, 360.0),text="Image is resized to 224x224.", fill='black')
+        self.resize_warning_2 = self.canvas.create_text((391.0, 360.0),text="Image is resized to 224x224.", fill='black')
+
+
+
+class RevealImagePage(Frame):
     
     def __init__(self, parent, controller):
         self.controller = controller
@@ -277,7 +287,7 @@ class Page2(Frame):
             image=self.button_image_1,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: page2_reveal_image_button_command(),
+            command=lambda: self.controller.reveal_image_button_command(),
             relief="flat"
         )
         self.button_1.place(
@@ -303,7 +313,7 @@ class Page2(Frame):
             image=self.button_image_2,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: page2_cover_image_picker(self.canvas, self.image_1, self.imagelist),
+            command=lambda: self.controller.secret_image_picker(self.canvas, self.image_1, self.imagelist),
             relief="flat"
         )
         self.button_2.place(
@@ -352,7 +362,7 @@ class Page2(Frame):
             image=self.button_image_3,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page1(self.controller),
+            command=lambda: self.controller.switch_hide_image_page(),
             relief="flat"
         )
         self.button_3.place(
@@ -369,7 +379,7 @@ class Page2(Frame):
             image=self.button_image_4,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page2(self.controller),
+            command=lambda: self.controller.switch_reveal_image_page(),
             relief="flat"
         )
         self.button_4.place(
@@ -386,7 +396,7 @@ class Page2(Frame):
             image=self.button_image_5,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page3(self.controller),
+            command=lambda: self.controller.switch_load_model_page(),
             relief="flat"
         )
         self.button_5.place(
@@ -404,8 +414,10 @@ class Page2(Frame):
             image=self.image_image_1
         )
 
+        self.resize_warning_1 = self.canvas.create_text((539.0, 357.0),text="Image is resized to 224x224.", fill='black')
 
-class Page3(Frame):
+
+class LoadModelPage(Frame):
      
     def __init__(self, parent, controller):
          
@@ -467,7 +479,7 @@ class Page3(Frame):
             image=self.button_image_1,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: model_picker(self.entry_1),
+            command=lambda: self.controller.model_picker(self.entry_1),
             relief="flat"
         )
         self.button_1.place(
@@ -516,7 +528,7 @@ class Page3(Frame):
             image=self.button_image_2,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page1(self.controller),
+            command=lambda: self.controller.switch_hide_image_page(),
             relief="flat"
         )
         self.button_2.place(
@@ -533,7 +545,7 @@ class Page3(Frame):
             image=self.button_image_3,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page2(self.controller),
+            command=lambda: self.controller.switch_reveal_image_page(),
             relief="flat"
         )
         self.button_3.place(
@@ -550,7 +562,7 @@ class Page3(Frame):
             image=self.button_image_4,
             borderwidth=0,
             highlightthickness=0,
-            command=lambda: switch_page3(self.controller),
+            command=lambda: self.controller.switch_load_model_page(),
             relief="flat"
         )
         self.button_4.place(
@@ -561,55 +573,6 @@ class Page3(Frame):
         )
 
 
-def switch_page1(controller):
-    controller.show_frame("Page1")
-
-
-def switch_page2(controller):
-    controller.show_frame("Page2")
-
-
-def switch_page3(controller):
-    controller.show_frame("Page3")
-
-
-def image_picker(canvas, image_on_canvas, imagelist):
-    path=filedialog.askopenfilename(filetypes=[("Image File",'*.JPEG *.png')])
-    # path=filedialog.askopenfilename(filetypes=(('Image File', '*.JPEG'),))
-    
-    # # add `, initialdir="..."` to set the initial directory shown in the dialog
-    # filedialog.askopenfilename(filetypes=[("Excel files", ".xlsx .xls")])
-    with Image.open(path) as img_thumbnail:
-        width = 200
-        height = 200
-        imagex, imagey = img_thumbnail.size
-        old_aspect = float(imagex)/float(imagey)
-        new_aspect = float(width)/float(height)
-        if old_aspect < new_aspect:
-            height = math.ceil(width / old_aspect)
-        else:
-            width = math.ceil(height * old_aspect)
-
-        image_display_size = width, height
-
-        img_thumbnail.thumbnail(image_display_size, Image.Resampling.LANCZOS)
-        
-        
-        imagex, imagey = img_thumbnail.size
-        # print(img_thumbnail.size)
-        if (imagex >= 200 and imagey >= 200):
-            left = (imagex - 200)/2
-            top = (imagey - 200)/2
-            right = (imagex + 200)/2
-            bottom = (imagey + 200)/2
-            # Crop the center of the image
-            img_thumbnail = img_thumbnail.crop((left, top, right, bottom))
-
-        imagelist.append(ImageTk.PhotoImage(img_thumbnail))
-        canvas.itemconfig(image_on_canvas, image = imagelist[-1])
-    
-    with Image.open(path) as img:
-        return img.convert('RGB')
     
 
 def set_default_cover_secret_images():
@@ -628,41 +591,20 @@ def set_default_cover_secret_images():
         page2_cover = img.convert('RGB')
 
 
-def page1_cover_secret_image_picker(canvas, image_on_canvas, self, is_cover):
-    global page1_cover, page1_secret
-    img = image_picker(canvas, image_on_canvas, self)
-    
-    if is_cover:
-        page1_cover = img
-    else:
-        page1_secret = img
+
+# def page2_cover_image_picker(canvas, image_on_canvas, self):
+#     global page2_cover
+#     img = image_picker(canvas, image_on_canvas, self)
+#     page2_cover = img
 
 
-def page2_cover_image_picker(canvas, image_on_canvas, self):
-    global page2_cover
-    img = image_picker(canvas, image_on_canvas, self)
-    page2_cover = img
+# def page1_hide_image_button_command():
+#     StegaImageProcessing.hide_image(model=model, cover_o=page1_cover, secret_o=page1_secret)
 
 
-def page1_hide_image_button_command():
-    StegaImageProcessing.hide_image(model=model, cover_o=page1_cover, secret_o=page1_secret)
+# def page2_reveal_image_button_command():
+#     StegaImageProcessing.reveal_image(model=model, cover_o=page2_cover, secret_o=page2_cover)
 
-
-def page2_reveal_image_button_command():
-    StegaImageProcessing.reveal_image(model=model, cover_o=page2_cover, secret_o=page2_cover)
-
-
-def model_picker(entry):
-    path=filedialog.askopenfilename(filetypes=[("Image File",'*.pth')])
-
-    entry.delete(0,END)
-    entry.insert(0,path)
-
-    global model
-
-    model = StegaImageProcessing.get_model(Path(path))
-    return path, model
-    # print(model)
 
 
 

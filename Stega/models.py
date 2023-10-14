@@ -310,7 +310,7 @@ class PrepareNetwork(nn.Module):
         # Return final for backpropagation. If Unittesting, return all tensors.
         if is_unittest:
             # return x3_a, x4_a, x5_a, concat_tensor_a, x3_concat, x4_concat, x5_concat, concat_final
-            return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_final
+            return x3_a, x4_a, x5_a, concat_tensor_a, x3_c, x4_c, x5_c, concat_final
             # return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_final
         else:
             return concat_final
@@ -1060,6 +1060,11 @@ class CombinedNetwork(nn.Module):
     def reveal_only(self, secret_tensor: torch.Tensor):
         recovered_secret = self.net_reveal(secret_tensor)
         return recovered_secret
+    
+    def secret_prep(self, secret_tensor: torch.Tensor):
+        prepped_secrets = self.net_prep.forward_helper(secret_tensor, is_unittest= True)
+        x3_a, x4_a, x5_a, concat_tensor_a, conv3x3, con4x4, conv5x5, prepped_secrets = self.net_prep.forward_helper(secret_tensor, is_unittest= True)
+        return prepped_secrets, conv3x3, con4x4, conv5x5
 
 
 
@@ -1092,7 +1097,7 @@ class DetectNetwork(nn.Module):
             - Input Shape: 32 x 28 x 28
             - Output Shape: 64 x 14 x 14
         Block 5
-            - Input Shape: 64 x 28 x 28
+            - Input Shape: 64 x 14 x 14
             - Output Shape: 128 x 1
         Fully-connected and Sigmond layer for prediction.
         
@@ -1156,7 +1161,7 @@ class DetectNetwork(nn.Module):
     def forward_helper(self, input_tensor: torch.Tensor, is_unittest = False):
         # print(input_tensor.shape)
         tensor_final = self.conv_block_3x3(input_tensor)
-        print(tensor_final.shape)
+        # print(tensor_final.shape)
 
         # Return final for backpropagation. If Unittesting, return all tensors.
         if is_unittest:

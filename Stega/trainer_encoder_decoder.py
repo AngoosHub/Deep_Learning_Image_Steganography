@@ -251,7 +251,7 @@ class TrainerEncoderDecoder(TrainerBase):
 
             # log progress every 100 batches
             if not self.SKIP_WANDB and batch_idx % 100 == 0:
-                wandb.log({#'train/batch': batch_idx,
+                wandb.log({
                         'train/batch_loss': combined_loss_log.item(),
                         'train/batch_cover_loss': c_loss_log.item(),
                         'train/batch_secret_loss': s_loss_log.item(),
@@ -316,7 +316,7 @@ class TrainerEncoderDecoder(TrainerBase):
         
         # log progress every 100 batches
             if not self.SKIP_WANDB and batch_idx % 100 == 0:
-                wandb.log({#'train/batch': batch_idx,
+                wandb.log({
                         'train/batch_loss_val': combined_loss_log.item(),
                         'train/batch_cover_loss_val': c_loss_log.item(),
                         'train/batch_secret_loss_val': s_loss_log.item(),
