@@ -43,5 +43,6 @@ WORKDIR /Major_Project
 
 
 CMD ["python3", "Deep_Learning_Image_Steganography/Stega/trainer.py"]
+# CMD ["python3", "Deep_Learning_Image_Steganography/Gui/gui.py"] # open GUI
 # ENTRYPOINT ["python3", "Deep_Learning_Image_Steganography/Stega/trainer.py", "1"] # Pass args
 EXPOSE 9092

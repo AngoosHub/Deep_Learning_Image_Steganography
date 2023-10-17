@@ -84,8 +84,8 @@ class StegaImageProcessing():
             save_image(StegaImageProcessing.denormalize(modified_cover.cpu()), f'{COVER_SAVE_PATH}/Stega_{timestamp}.png')
             save_image(StegaImageProcessing.denormalize(recovered_secret.cpu()), f'{COVER_SAVE_PATH}/Stega_r_{timestamp}.png')
 
-            save_image(StegaImageProcessing.denormalize(cuda_cover.cpu()), f'{COVER_SAVE_PATH}/Stega_o_{timestamp}.png')
-            save_image(StegaImageProcessing.denormalize(cuda_secret.cpu()), f'{COVER_SAVE_PATH}/Stega_r_o_{timestamp}.png')
+            # save_image(StegaImageProcessing.denormalize(cuda_cover.cpu()), f'{COVER_SAVE_PATH}/Stega_o_{timestamp}.png')
+            # save_image(StegaImageProcessing.denormalize(cuda_secret.cpu()), f'{COVER_SAVE_PATH}/Stega_r_o_{timestamp}.png')
 
 
             # plot_images_comparison(cover, cover_x, secret, secret_x, show_image=True)

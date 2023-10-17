@@ -310,7 +310,7 @@ class PrepareNetwork(nn.Module):
         # Return final for backpropagation. If Unittesting, return all tensors.
         if is_unittest:
             # return x3_a, x4_a, x5_a, concat_tensor_a, x3_concat, x4_concat, x5_concat, concat_final
-            return x3_a, x4_a, x5_a, concat_tensor_a, x3_c, x4_c, x5_c, concat_final
+            return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_final
             # return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_final
         else:
             return concat_final
@@ -657,7 +657,7 @@ class HidingNetwork(nn.Module):
         # Return final for backpropagation. If Unittesting, return all tensors.
         if is_unittest:
             # return x3, x4, x5, concat_tensor, x3_concat, x4_concat, x5_concat, concat_final, tensor_final, tensor_noise
-            return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, tensor_final, tensor_noise
+            return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_tensor_c, tensor_final, tensor_noise
             # return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_tensor_c, tensor_final, tensor_noise
         else:
             return tensor_final, tensor_noise
@@ -1000,7 +1000,7 @@ class RevealNetwork(nn.Module):
         # Return final for backpropagation. If Unittesting, return all tensors.
         if is_unittest:
             # return x3, x4, x5, concat_tensor, x3_concat, x4_concat, x5_concat, concat_final, tensor_final
-            return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, tensor_final
+            return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_tensor_c, tensor_final
             # return x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_tensor_c, tensor_final
         else:
             return tensor_final
