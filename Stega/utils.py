@@ -12,6 +12,8 @@ import time
 
 
 class utils():
+    img_cover = torch.ones(1, 3, 224, 224)
+    img_secret = torch.ones(1, 3, 224, 224)
 
     @staticmethod
     def denormalize(tensor):
@@ -243,7 +245,7 @@ class utils():
 
 
     @staticmethod
-    def save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx, SAVE_EPOCH_PROGRESS, EPOCHS):
+    def save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx, SAVE_EPOCH_PROGRESS, EPOCHS, device, SKIP_WANDB, WANDB_VAR):
         # Check if save model flag is active
             if SAVE_EPOCH_PROGRESS:
                 timestamp = f'{time.strftime("%Y%m%d-%H%M%S")}'
@@ -267,10 +269,8 @@ class utils():
                 utils.save_model(model=save_state, model_name=model_name)
 
                 # Try plotting a batch of image fed to model.
-                global img_cover, img_secret
-                utils.test_plot_single_batch(img_cover, img_secret, model)
+                utils.test_plot_single_batch(utils.img_cover, utils.img_secret, model, device, SKIP_WANDB)
 
-                global WANDB_VAR
                 if WANDB_VAR != False:
                     artifact_path = Path("saved_models/latest")
                     if not artifact_path.is_dir():
@@ -279,7 +279,7 @@ class utils():
                     # latest_model = "latest/model.pth"
                     latest_model_path = Path("saved_models") / model_name
                     # utils.save_model(model=save_state, model_name=latest_model)
-                    artifact = wandb.Artifact(name='model', type='model')
+                    artifact = wandb.Artifact(name='model_v3_b2', type='model_v3_b2')
                     artifact.add_file(latest_model_path)
                     WANDB_VAR.log_artifact(artifact)
 

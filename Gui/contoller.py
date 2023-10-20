@@ -73,8 +73,11 @@ class LoadModelPageController(PageController):
 
         global model
 
-        model = StegaImageProcessing.get_model(Path(path))
-        self.model = model
+        try:
+            model = StegaImageProcessing.get_model(Path(path))
+            self.model = model
+        except:
+            print("Please select a valid model file.")
         return path, model
         # print(model)
 
@@ -82,34 +85,40 @@ class LoadModelPageController(PageController):
 def image_picker(canvas, image_on_canvas, imagelist):
     path=filedialog.askopenfilename(filetypes=[("Image File",'*.JPEG *.png')])
 
-    with Image.open(path) as img_thumbnail:
-        width = 200
-        height = 200
-        imagex, imagey = img_thumbnail.size
-        old_aspect = float(imagex)/float(imagey)
-        new_aspect = float(width)/float(height)
-        if old_aspect < new_aspect:
-            height = math.ceil(width / old_aspect)
-        else:
-            width = math.ceil(height * old_aspect)
+    try:
 
-        image_display_size = width, height
+        with Image.open(path) as img_thumbnail:
+            width = 200
+            height = 200
+            imagex, imagey = img_thumbnail.size
+            old_aspect = float(imagex)/float(imagey)
+            new_aspect = float(width)/float(height)
+            if old_aspect < new_aspect:
+                height = math.ceil(width / old_aspect)
+            else:
+                width = math.ceil(height * old_aspect)
 
-        img_thumbnail.thumbnail(image_display_size, Image.Resampling.LANCZOS)
+            image_display_size = width, height
+
+            img_thumbnail.thumbnail(image_display_size, Image.Resampling.LANCZOS)
+            
+            
+            imagex, imagey = img_thumbnail.size
+            # print(img_thumbnail.size)
+            if (imagex >= 200 and imagey >= 200):
+                left = (imagex - 200)/2
+                top = (imagey - 200)/2
+                right = (imagex + 200)/2
+                bottom = (imagey + 200)/2
+                # Crop the center of the image
+                img_thumbnail = img_thumbnail.crop((left, top, right, bottom))
+
+            imagelist.append(ImageTk.PhotoImage(img_thumbnail))
+            canvas.itemconfig(image_on_canvas, image = imagelist[-1])
         
-        
-        imagex, imagey = img_thumbnail.size
-        # print(img_thumbnail.size)
-        if (imagex >= 200 and imagey >= 200):
-            left = (imagex - 200)/2
-            top = (imagey - 200)/2
-            right = (imagex + 200)/2
-            bottom = (imagey + 200)/2
-            # Crop the center of the image
-            img_thumbnail = img_thumbnail.crop((left, top, right, bottom))
-
-        imagelist.append(ImageTk.PhotoImage(img_thumbnail))
-        canvas.itemconfig(image_on_canvas, image = imagelist[-1])
+        with Image.open(path) as img:
+            return img.convert('RGB')
     
-    with Image.open(path) as img:
-        return img.convert('RGB')
+    except:
+        print("Must select PNG or JPEG image.")
+

@@ -54,7 +54,8 @@ class TrainerEncoderDecoder(TrainerBase):
                  SAVE_PROGRESS_EVERY_10000_BATCHES,
                  SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES,
                  device,
-                 detector_model) -> None:
+                 detector_model, 
+                 WANDB_VAR) -> None:
         
         self.LEARNING_RATE = LEARNING_RATE # 0.001
         self.BATCH_SIZE = BATCH_SIZE # lower to reduce memory usage
@@ -71,6 +72,7 @@ class TrainerEncoderDecoder(TrainerBase):
 
         self.device = device # GPU device to use
         self.detector_model = detector_model
+        self.WANDB_VAR = WANDB_VAR
 
 
     def train(self):
@@ -88,6 +90,8 @@ class TrainerEncoderDecoder(TrainerBase):
         val_dataloader = dataset_loader.DatasetLoader.get_val_dataloader(val_dir, self.BATCH_SIZE, self.NUM_CPU, self.NORMALIZE)
         test_dataloader = dataset_loader.DatasetLoader.get_test_dataloader(test_dir, self.BATCH_SIZE, 1, self.NORMALIZE)
         self.img_cover, self.img_secret = utils.get_single_batch_into_image(test_dataloader)
+        utils.img_cover = self.img_cover
+        utils.img_secret = self.img_secret
 
 
         my_custom_loss = mse_ssim_detector_loss.MSE_and_SSIM_and_Detector_loss(detector_model=self.detector_model, BETA=self.BETA)
@@ -131,7 +135,7 @@ class TrainerEncoderDecoder(TrainerBase):
             
             # Save checkpoint after each epoch
             if self.SAVE_EPOCH_PROGRESS:
-                utils.save_checkpoint(test_model, optimizer, optimizer_reveal, epoch_idx, batch_idx, self.SAVE_EPOCH_PROGRESS, self.EPOCHS)
+                utils.save_checkpoint(test_model, optimizer, optimizer_reveal, epoch_idx, batch_idx, self.SAVE_EPOCH_PROGRESS, self.EPOCHS, self.device, self.SKIP_WANDB, self.WANDB_VAR)
 
             epoch_idx += 1
             
@@ -286,9 +290,15 @@ class TrainerEncoderDecoder(TrainerBase):
                 #                         batch_idx)
                 
             if self.SAVE_PROGRESS_EVERY_10000_BATCHES and batch_idx % 10000 == 0 and batch_idx > 5000:
-                utils.save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx, self.SAVE_EPOCH_PROGRESS, self.EPOCHS)
+                utils.save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx, self.SAVE_EPOCH_PROGRESS, self.EPOCHS, self.device, self.SKIP_WANDB, self.WANDB_VAR)
+            
+            # if (batch_idx  == 500): #(batch_idx  == 2) or (batch_idx  == 50) or (batch_idx  == 100) or 
+            #     utils.save_checkpoint(model, optimizer, optimizer_reveal, epoch_idx, batch_idx, self.SAVE_EPOCH_PROGRESS, self.EPOCHS, self.device, self.SKIP_WANDB, self.WANDB_VAR)
+            
 
-            batch_idx += 1
+            # batch_idx += 1
+            # if batch_idx  >= 501:
+                break
 
         # Uncomment for wandb logging of average epoch error.
         # return train_loss, cover_loss, secret_loss, cover_loss_mse,secret_loss_mse, cover_loss_ssim, secret_loss_ssim

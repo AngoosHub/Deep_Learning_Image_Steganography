@@ -40,8 +40,8 @@ SAVE_PROGRESS_EVERY_10000_BATCHES = True
 SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = False # True to skip saving image showing early learning progress
 # WANDB_VAR
 
-LEARNING_RATE = 0.01 # 0.0001 slower
-BATCH_SIZE = 4 # lower to reduce memory usage
+LEARNING_RATE = 0.001 # 0.0001 slower
+BATCH_SIZE = 2 # lower to reduce memory usage
 EPOCHS = 1 # ILSVRC2017 Training Set has about half million images. Model training usually stablizes within 1 Epoch.
 BETA = 0.75 # Loss function parameter. Controls Secret and Detector contribution to loss.
 
@@ -81,7 +81,8 @@ def train_stega_model():
                                                                   SAVE_PROGRESS_EVERY_10000_BATCHES,
                                                                   SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES,
                                                                   device,
-                                                                  detector_model)
+                                                                  detector_model,
+                                                                  WANDB_VAR)
     
     model_trainer.train()
 
@@ -99,7 +100,8 @@ def train_detector_model():
                                                      SAVE_EPOCH_PROGRESS,
                                                      SAVE_PROGRESS_EVERY_10000_BATCHES,
                                                      SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES,
-                                                     device)
+                                                     device,
+                                                     WANDB_VAR)
     
     model_trainer.train()
 

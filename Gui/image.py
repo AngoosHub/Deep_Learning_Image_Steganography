@@ -17,7 +17,7 @@ from torchvision.utils import save_image
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 old_model_path = Path("Deep_Learning_Image_Steganography/Trained_Models/Steganography/Old_Model_V1.pth")
-model_V3_path = Path("Deep_Learning_Image_Steganography/Trained_Models/Steganography/Stega_Model_V3_(detector_V1).pth")
+model_V3_path = Path("Deep_Learning_Image_Steganography/Trained_Models/Steganography/Stega_Model_V3_Batch_8000.pth")
 MODEL_PATH = model_V3_path
 COVER_SAVE_PATH = "Deep_Learning_Image_Steganography/Saved_Images/Modified_Cover"
 SECRET_SAVE_PATH = "Deep_Learning_Image_Steganography/Saved_Images/Revealed_Secret"
@@ -172,8 +172,9 @@ class StegaImageProcessing():
         
         model.load_state_dict(checkpoint['model_state_dict'])
         # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        # epoch_idx = checkpoint['epoch']
-        # batch_idx = checkpoint['batch']
+        epoch_idx = checkpoint['epoch']
+        batch_idx = checkpoint['batch']
+        print(f"Loaded Model -  Epoch:{epoch_idx} Batch:{batch_idx}")
         return model.to(device)
 
 
@@ -446,26 +447,31 @@ def visualize_secret_prep(model, cover_o, secret_o):
         model.eval()
         with torch.inference_mode():
             # modified_cover, recovered_secret = model(cuda_cover, cuda_secret)
-            prepped_secrets, conv3x3, con4x4, conv5x5 = model.secret_prep(cuda_secret)
+            concat_tensor_a, concat_tensor_b, concat_final = model.secret_prep(cuda_secret)
             
         
         # cover = cuda_cover.cpu().squeeze(0)
         # cover_x = modified_cover.cpu().squeeze(0)
         secret = cuda_secret.cpu().squeeze(0)
-        secret_x = prepped_secrets.cpu().squeeze(0)
+        secret_x = concat_final.cpu().squeeze(0)
+
+        secret_a = concat_tensor_a.cpu().squeeze(0)
+        secret_b = concat_tensor_b.cpu().squeeze(0)
 
         break
 
 
     fig = pyplot.figure(figsize=(10, 20))
 
-    gs0 = gridspec.GridSpec(2, 1)
+    gs0 = gridspec.GridSpec(3, 1)
     gs00 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gs0[0], wspace=0)
     gs01 = gridspec.GridSpecFromSubplotSpec(2, 5, subplot_spec=gs0[1], wspace=0)
+    gs02 = gridspec.GridSpecFromSubplotSpec(2, 5, subplot_spec=gs0[2], wspace=0)
 
     # cover_denorm = StegaImageProcessing.denormalize(cover).permute(1, 2, 0)
     # cover_x_denorm = StegaImageProcessing.denormalize(cover_x).permute(1, 2, 0)
     secret_denorm = StegaImageProcessing.denormalize(secret).permute(1, 2, 0)
+    secret_a_denorm = secret_a.permute(1, 2, 0)
     secret_x_denorm = secret_x.permute(1, 2, 0)
 
 
@@ -477,20 +483,220 @@ def visualize_secret_prep(model, cover_o, secret_o):
     gs00_ax00.set_title(f"Original Secret")
     gs00_ax00.axis("off")
 
-    # gs00_ax01 = fig.add_subplot(gs00[0, 1])
-    # gs00_ax01.imshow(cover_x_denorm) 
-    # gs00_ax01.set_title(f"Reconstructed Cover")
-    # gs00_ax01.axis("off")
 
-    # gs00_ax10 = fig.add_subplot(gs00[1, 0])
-    # gs00_ax10.imshow(secret_denorm) 
-    # gs00_ax10.set_title(f"Original Secret")
-    # gs00_ax10.axis("off")
+    # Visualize A few tensors from Prep
 
-    # gs00_ax11 = fig.add_subplot(gs00[1, 1])
-    # gs00_ax11.imshow(secret_x_denorm) 
-    # gs00_ax11.set_title(f"Recovered Secret")
-    # gs00_ax11.axis("off")
+
+    denorm = transforms.Normalize(mean=[-0.456/0.224],
+                                    std=[1/0.224])
+    
+    visual1 = denorm(secret_a_denorm[:, :, 1:2])
+    visual2 = denorm(secret_a_denorm[:, :, 15:16])
+    visual3 = denorm(secret_a_denorm[:, :, 45:46])
+    visual4 = denorm(secret_a_denorm[:, :, 55:56])
+    visual5 = denorm(secret_a_denorm[:, :, 75:76])
+    visual6 = denorm(secret_a_denorm[:, :, 95:96])
+    visual7 = denorm(secret_a_denorm[:, :, 105:106])
+    visual8 = denorm(secret_a_denorm[:, :, 125:126])
+    visual9 = denorm(secret_a_denorm[:, :, 135:136])
+    visual10 = denorm(secret_a_denorm[:, :, 145:146])
+
+    # cover_error = np.abs(cover_x_denorm - cover_denorm)
+    # secret_error = np.abs(secret_x_denorm - secret_denorm)
+    
+
+    gs01_ax00 = fig.add_subplot(gs01[0, 0])
+    gs01_ax00.imshow(visual1, cmap='gray') 
+    # gs01_ax00.set_title(f"visual1")
+    gs01_ax00.axis("off")
+
+    gs01_ax01 = fig.add_subplot(gs01[0, 1])
+    gs01_ax01.imshow(visual2, cmap='gray') 
+    # gs01_ax01.set_title(f"Prepare - Inception Module #1 Output")
+    gs01_ax01.axis("off")
+
+    gs01_ax02 = fig.add_subplot(gs01[0, 2])
+    gs01_ax02.imshow(visual3, cmap='gray')
+    gs01_ax02.set_title(f"Prepare - Inception Module #1 Output")
+    gs01_ax02.axis("off")
+
+    gs01_ax03 = fig.add_subplot(gs01[0, 3])
+    gs01_ax03.imshow(visual4, cmap='gray')
+    # gs01_ax03.set_title(f"visual4")
+    gs01_ax03.axis("off")
+
+    gs01_ax04 = fig.add_subplot(gs01[0, 4])
+    gs01_ax04.imshow(visual5, cmap='gray')
+    # gs01_ax04.set_title(f"visual5")
+    gs01_ax04.axis("off")
+
+    gs01_ax10 = fig.add_subplot(gs01[1, 0])
+    gs01_ax10.imshow(visual6, cmap='gray') 
+    # gs01_ax10.set_title(f"visual6")
+    gs01_ax10.axis("off")
+
+    gs01_ax11 = fig.add_subplot(gs01[1, 1])
+    gs01_ax11.imshow(visual7, cmap='gray') 
+    # gs01_ax11.set_title(f"visual7")
+    gs01_ax11.axis("off")
+
+    gs01_ax12 = fig.add_subplot(gs01[1, 2])
+    gs01_ax12.imshow(visual8, cmap='gray')
+    # gs01_ax12.set_title(f"visual8")
+    gs01_ax12.axis("off")
+
+    gs01_ax13 = fig.add_subplot(gs01[1, 3])
+    gs01_ax13.imshow(visual9, cmap='gray')
+    # gs01_ax13.set_title(f"visual9")
+    gs01_ax13.axis("off")
+
+    gs01_ax14 = fig.add_subplot(gs01[1, 4])
+    gs01_ax14.imshow(visual10, cmap='gray')
+    # gs01_ax14.set_title(f"visual10")
+    gs01_ax14.axis("off")
+
+
+
+
+    visual1x = denorm(secret_x_denorm[:, :, 1:2])
+    visual2x = denorm(secret_x_denorm[:, :, 15:16])
+    visual3x = denorm(secret_x_denorm[:, :, 45:46])
+    visual4x = denorm(secret_x_denorm[:, :, 55:56])
+    visual5x = denorm(secret_x_denorm[:, :, 75:76])
+    visual6x = denorm(secret_x_denorm[:, :, 95:96])
+    visual7x = denorm(secret_x_denorm[:, :, 105:106])
+    visual8x = denorm(secret_x_denorm[:, :, 125:126])
+    visual9x = denorm(secret_x_denorm[:, :, 135:136])
+    visual10x = denorm(secret_x_denorm[:, :, 145:146])
+
+    # cover_error = np.abs(cover_x_denorm - cover_denorm)
+    # secret_error = np.abs(secret_x_denorm - secret_denorm)
+    
+
+    gs02_ax00 = fig.add_subplot(gs02[0, 0])
+    gs02_ax00.imshow(visual1x, cmap='gray') 
+    # gs01_ax00.set_title(f"visual1")
+    gs02_ax00.axis("off")
+
+    gs02_ax01 = fig.add_subplot(gs02[0, 1])
+    gs02_ax01.imshow(visual2x, cmap='gray') 
+    # gs02_ax01.set_title(f"Prepare - Inception Module #3 Output")
+    gs02_ax01.axis("off")
+
+    gs02_ax02 = fig.add_subplot(gs02[0, 2])
+    gs02_ax02.imshow(visual3x, cmap='gray')
+    gs02_ax02.set_title(f"Prepare - Inception Module #3 Output")
+    gs02_ax02.axis("off")
+
+    gs02_ax03 = fig.add_subplot(gs02[0, 3])
+    gs02_ax03.imshow(visual4x, cmap='gray')
+    # gs01_ax03.set_title(f"visual4")
+    gs02_ax03.axis("off")
+
+    gs02_ax04 = fig.add_subplot(gs02[0, 4])
+    gs02_ax04.imshow(visual5x, cmap='gray')
+    # gs01_ax04.set_title(f"visual5")
+    gs02_ax04.axis("off")
+
+    gs02_ax10 = fig.add_subplot(gs02[1, 0])
+    gs02_ax10.imshow(visual6x, cmap='gray') 
+    # gs01_ax10.set_title(f"visual6")
+    gs02_ax10.axis("off")
+
+    gs02_ax11 = fig.add_subplot(gs02[1, 1])
+    gs02_ax11.imshow(visual7x, cmap='gray') 
+    # gs01_ax11.set_title(f"visual7")
+    gs02_ax11.axis("off")
+
+    gs02_ax12 = fig.add_subplot(gs02[1, 2])
+    gs02_ax12.imshow(visual8x, cmap='gray')
+    # gs01_ax12.set_title(f"visual8")
+    gs02_ax12.axis("off")
+
+    gs02_ax13 = fig.add_subplot(gs02[1, 3])
+    gs02_ax13.imshow(visual9x, cmap='gray')
+    # gs01_ax13.set_title(f"visual9")
+    gs02_ax13.axis("off")
+
+    gs02_ax14 = fig.add_subplot(gs02[1, 4])
+    gs02_ax14.imshow(visual10x, cmap='gray')
+    # gs01_ax14.set_title(f"visual10")
+    gs02_ax14.axis("off")
+
+
+
+
+    fig.suptitle(f"Prepare CNN Visualization", fontsize=16)
+
+    plt.show()
+        
+
+
+def visualize_cover_hide(model, cover_o, secret_o):
+
+    buffer = queue.Queue()
+    # new_input = Image.open(image_path)
+
+    # Populate queue with cover and secret
+    buffer.put(StegaImageProcessing.normalize_and_transform(cover_o))
+    buffer.put(StegaImageProcessing.normalize_and_transform(secret_o))
+
+    dataset = ImageDataset(buffer)
+    dataloader = torch.utils.data.DataLoader(dataset=dataset, 
+                                            batch_size=2,
+                                            shuffle=False)
+
+    for data in dataloader:
+        a, b = data.split(2//2,dim=0)
+        cuda_cover = a.to(device)
+        cuda_secret = b.to(device)
+
+        model.eval()
+        with torch.inference_mode():
+            # modified_cover, recovered_secret = model(cuda_cover, cuda_secret)
+            concat_tensor_a, concat_tensor_b, concat_tensor_c, tensor_noise = model.cover_hide(cuda_cover, cuda_secret)
+            
+        
+        cover = cuda_cover.cpu().squeeze(0)
+        # cover_x = modified_cover.cpu().squeeze(0)
+        secret = cuda_secret.cpu().squeeze(0)
+        secret_x = concat_tensor_c.cpu().squeeze(0)
+
+        secret_a = concat_tensor_a.cpu().squeeze(0)
+        secret_s = tensor_noise.cpu().squeeze(0)
+
+        break
+
+
+    fig = pyplot.figure(figsize=(10, 20))
+
+    # gs0 = gridspec.GridSpec(4, 1)
+    gs0 = gridspec.GridSpec(3, 1)
+    gs00 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs0[0], wspace=0)
+    gs01 = gridspec.GridSpecFromSubplotSpec(2, 5, subplot_spec=gs0[1], wspace=0)
+    gs02 = gridspec.GridSpecFromSubplotSpec(2, 5, subplot_spec=gs0[2], wspace=0)
+    # gs03 = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs0[3], wspace=0)
+
+    cover_denorm = StegaImageProcessing.denormalize(cover).permute(1, 2, 0)
+    # cover_x_denorm = StegaImageProcessing.denormalize(cover_x).permute(1, 2, 0)
+    secret_denorm = StegaImageProcessing.denormalize(secret).permute(1, 2, 0)
+    secret_a_denorm = secret_a.permute(1, 2, 0)
+    secret_x_denorm = secret_x.permute(1, 2, 0)
+    secret_s_denorm = secret_s.permute(1, 2, 0)
+
+
+    # plt.subplots_adjust(wspace=0, hspace=0)
+
+    # Image Comparison Section
+    gs00_ax00 = fig.add_subplot(gs00[0, 0])
+    gs00_ax00.imshow(cover_denorm) 
+    gs00_ax00.set_title(f"Original Cover")
+    gs00_ax00.axis("off")
+
+    gs00_ax00 = fig.add_subplot(gs00[0, 1])
+    gs00_ax00.imshow(secret_denorm) 
+    gs00_ax00.set_title(f"Original Secret")
+    gs00_ax00.axis("off")
 
 
     # Visualize A few tensors from Prep
@@ -499,16 +705,16 @@ def visualize_secret_prep(model, cover_o, secret_o):
     denorm = transforms.Normalize(mean=[-0.456/0.224],
                                     std=[1/0.224])
     
-    visual1 = denorm(secret_x_denorm[:, :, 1:2])
-    visual2 = denorm(secret_x_denorm[:, :, 15:16])
-    visual3 = denorm(secret_x_denorm[:, :, 45:46])
-    visual4 = denorm(secret_x_denorm[:, :, 55:56])
-    visual5 = denorm(secret_x_denorm[:, :, 75:76])
-    visual6 = denorm(secret_x_denorm[:, :, 95:96])
-    visual7 = denorm(secret_x_denorm[:, :, 105:106])
-    visual8 = denorm(secret_x_denorm[:, :, 125:126])
-    visual9 = denorm(secret_x_denorm[:, :, 135:136])
-    visual10 = denorm(secret_x_denorm[:, :, 145:146])
+    visual1 = denorm(secret_a_denorm[:, :, 1:2])
+    visual2 = denorm(secret_a_denorm[:, :, 15:16])
+    visual3 = denorm(secret_a_denorm[:, :, 45:46])
+    visual4 = denorm(secret_a_denorm[:, :, 55:56])
+    visual5 = denorm(secret_a_denorm[:, :, 75:76])
+    visual6 = denorm(secret_a_denorm[:, :, 95:96])
+    visual7 = denorm(secret_a_denorm[:, :, 105:106])
+    visual8 = denorm(secret_a_denorm[:, :, 125:126])
+    visual9 = denorm(secret_a_denorm[:, :, 135:136])
+    visual10 = denorm(secret_a_denorm[:, :, 145:146])
 
     # cover_error = np.abs(cover_x_denorm - cover_denorm)
     # secret_error = np.abs(secret_x_denorm - secret_denorm)
@@ -516,59 +722,155 @@ def visualize_secret_prep(model, cover_o, secret_o):
 
     gs01_ax00 = fig.add_subplot(gs01[0, 0])
     gs01_ax00.imshow(visual1, cmap='gray') 
-    gs01_ax00.set_title(f"visual1")
+    # gs01_ax00.set_title(f"visual1")
     gs01_ax00.axis("off")
 
     gs01_ax01 = fig.add_subplot(gs01[0, 1])
     gs01_ax01.imshow(visual2, cmap='gray') 
-    gs01_ax01.set_title(f"visual2")
+    # gs01_ax01.set_title(f"Prepare - Inception Module #1 Output")
     gs01_ax01.axis("off")
 
     gs01_ax02 = fig.add_subplot(gs01[0, 2])
     gs01_ax02.imshow(visual3, cmap='gray')
-    gs01_ax02.set_title(f"visual3")
+    gs01_ax02.set_title(f"Hiding - Inception Module #1 Output")
     gs01_ax02.axis("off")
 
     gs01_ax03 = fig.add_subplot(gs01[0, 3])
     gs01_ax03.imshow(visual4, cmap='gray')
-    gs01_ax03.set_title(f"visual4")
+    # gs01_ax03.set_title(f"visual4")
     gs01_ax03.axis("off")
 
     gs01_ax04 = fig.add_subplot(gs01[0, 4])
     gs01_ax04.imshow(visual5, cmap='gray')
-    gs01_ax04.set_title(f"visual5")
+    # gs01_ax04.set_title(f"visual5")
     gs01_ax04.axis("off")
 
     gs01_ax10 = fig.add_subplot(gs01[1, 0])
     gs01_ax10.imshow(visual6, cmap='gray') 
-    gs01_ax10.set_title(f"visual6")
+    # gs01_ax10.set_title(f"visual6")
     gs01_ax10.axis("off")
 
     gs01_ax11 = fig.add_subplot(gs01[1, 1])
     gs01_ax11.imshow(visual7, cmap='gray') 
-    gs01_ax11.set_title(f"visual7")
+    # gs01_ax11.set_title(f"visual7")
     gs01_ax11.axis("off")
 
     gs01_ax12 = fig.add_subplot(gs01[1, 2])
     gs01_ax12.imshow(visual8, cmap='gray')
-    gs01_ax12.set_title(f"visual8")
+    # gs01_ax12.set_title(f"visual8")
     gs01_ax12.axis("off")
 
     gs01_ax13 = fig.add_subplot(gs01[1, 3])
     gs01_ax13.imshow(visual9, cmap='gray')
-    gs01_ax13.set_title(f"visual9")
+    # gs01_ax13.set_title(f"visual9")
     gs01_ax13.axis("off")
 
     gs01_ax14 = fig.add_subplot(gs01[1, 4])
     gs01_ax14.imshow(visual10, cmap='gray')
-    gs01_ax14.set_title(f"visual10")
+    # gs01_ax14.set_title(f"visual10")
     gs01_ax14.axis("off")
 
 
-    fig.suptitle(f"Prep Secret Visualization", fontsize=16)
+
+
+    visual1x = denorm(secret_x_denorm[:, :, 1:2])
+    visual2x = denorm(secret_x_denorm[:, :, 15:16])
+    visual3x = denorm(secret_x_denorm[:, :, 45:46])
+    visual4x = denorm(secret_x_denorm[:, :, 55:56])
+    visual5x = denorm(secret_x_denorm[:, :, 75:76])
+    visual6x = denorm(secret_x_denorm[:, :, 95:96])
+    visual7x = denorm(secret_x_denorm[:, :, 105:106])
+    visual8x = denorm(secret_x_denorm[:, :, 125:126])
+    visual9x = denorm(secret_x_denorm[:, :, 135:136])
+    visual10x = denorm(secret_x_denorm[:, :, 145:146])
+
+    # cover_error = np.abs(cover_x_denorm - cover_denorm)
+    # secret_error = np.abs(secret_x_denorm - secret_denorm)
+    
+
+    gs02_ax00 = fig.add_subplot(gs02[0, 0])
+    gs02_ax00.imshow(visual1x, cmap='gray') 
+    # gs01_ax00.set_title(f"visual1")
+    gs02_ax00.axis("off")
+
+    gs02_ax01 = fig.add_subplot(gs02[0, 1])
+    gs02_ax01.imshow(visual2x, cmap='gray') 
+    # gs02_ax01.set_title(f"Prepare - Inception Module #3 Output")
+    gs02_ax01.axis("off")
+
+    gs02_ax02 = fig.add_subplot(gs02[0, 2])
+    gs02_ax02.imshow(visual3x, cmap='gray')
+    gs02_ax02.set_title(f"Hiding - Inception Module #3 Output")
+    gs02_ax02.axis("off")
+
+    gs02_ax03 = fig.add_subplot(gs02[0, 3])
+    gs02_ax03.imshow(visual4x, cmap='gray')
+    # gs01_ax03.set_title(f"visual4")
+    gs02_ax03.axis("off")
+
+    gs02_ax04 = fig.add_subplot(gs02[0, 4])
+    gs02_ax04.imshow(visual5x, cmap='gray')
+    # gs01_ax04.set_title(f"visual5")
+    gs02_ax04.axis("off")
+
+    gs02_ax10 = fig.add_subplot(gs02[1, 0])
+    gs02_ax10.imshow(visual6x, cmap='gray') 
+    # gs01_ax10.set_title(f"visual6")
+    gs02_ax10.axis("off")
+
+    gs02_ax11 = fig.add_subplot(gs02[1, 1])
+    gs02_ax11.imshow(visual7x, cmap='gray') 
+    # gs01_ax11.set_title(f"visual7")
+    gs02_ax11.axis("off")
+
+    gs02_ax12 = fig.add_subplot(gs02[1, 2])
+    gs02_ax12.imshow(visual8x, cmap='gray')
+    # gs01_ax12.set_title(f"visual8")
+    gs02_ax12.axis("off")
+
+    gs02_ax13 = fig.add_subplot(gs02[1, 3])
+    gs02_ax13.imshow(visual9x, cmap='gray')
+    # gs01_ax13.set_title(f"visual9")
+    gs02_ax13.axis("off")
+
+    gs02_ax14 = fig.add_subplot(gs02[1, 4])
+    gs02_ax14.imshow(visual10x, cmap='gray')
+    # gs01_ax14.set_title(f"visual10")
+    gs02_ax14.axis("off")
+
+
+
+    # visual1s = denorm(secret_s_denorm[:, :, 0:1])
+    # visual2s = denorm(secret_s_denorm[:, :, 1:2])
+    # visual3s = denorm(secret_s_denorm[:, :, 2:])
+
+    # # cover_error = np.abs(cover_x_denorm - cover_denorm)
+    # # secret_error = np.abs(secret_x_denorm - secret_denorm)
+    
+
+    # gs03_ax00 = fig.add_subplot(gs03[0, 0])
+    # gs03_ax00.imshow(visual1s, cmap='gray') 
+    # # gs01_ax00.set_title(f"visual1")
+    # gs03_ax00.axis("off")
+
+    # gs03_ax01 = fig.add_subplot(gs03[0, 1])
+    # gs03_ax01.imshow(visual2s, cmap='gray') 
+    # gs03_ax01.set_title(f"Hiding - Output Layer")
+    # gs03_ax01.axis("off")
+
+    # gs03_ax02 = fig.add_subplot(gs03[0, 2])
+    # gs03_ax02.imshow(visual3s, cmap='gray')
+    # # gs02_ax02.set_title(f"Hiding - Inception Module #3 Output")
+    # gs03_ax02.axis("off")
+
+
+
+    fig.suptitle(f"Hiding CNN Visualization", fontsize=16)
 
     plt.show()
         
+
+
 
 from ignite.metrics import Loss, SSIM
 from ignite.engine import *
@@ -622,8 +924,10 @@ def eval_step(engine, batch):
 
 
 if __name__ == "__main__":
-    cover = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage/image_1.png")).convert('RGB')
-    secret = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage/image_2.png")).convert('RGB')
+    # cover = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage/temp/image_1.png")).convert('RGB')
+    # secret = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage/temp/image_2.png")).convert('RGB')
+    cover = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage/temp/image_3.JPEG")).convert('RGB')
+    secret = Image.open(Path("Deep_Learning_Image_Steganography/Gui/assets/HideImagePage/temp/image_4.JPEG")).convert('RGB')
     # secret = Image.open(Path("image4.JPEG"))
 
     # with Image.open(relative_to_assets_page1("image_1.png")).convert('RGB') as image1:
@@ -633,10 +937,10 @@ if __name__ == "__main__":
     #     image_denorm = denormalize_and_toPIL(image_tensor)
     #     image_denorm.show()
 
-    get_pnsr_from_images()
+    # get_pnsr_from_images()
 
-    # model = StegaImageProcessing.get_model()
-    # visualize_secret_prep(model, cover, secret)
+    model = StegaImageProcessing.get_model()
+    visualize_secret_prep(model, cover, secret)
     print("Done")
     # StegaImageProcessing.hide_image(model, cover, secret)
 

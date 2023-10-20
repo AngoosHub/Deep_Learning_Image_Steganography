@@ -1062,13 +1062,16 @@ class CombinedNetwork(nn.Module):
         return recovered_secret
     
     def secret_prep(self, secret_tensor: torch.Tensor):
-        prepped_secrets = self.net_prep.forward_helper(secret_tensor, is_unittest= True)
-        x3_a, x4_a, x5_a, concat_tensor_a, conv3x3, con4x4, conv5x5, prepped_secrets = self.net_prep.forward_helper(secret_tensor, is_unittest= True)
-        return prepped_secrets, conv3x3, con4x4, conv5x5
+        # prepped_secrets = self.net_prep.forward_helper(secret_tensor, is_unittest= True)
+        x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_final = self.net_prep.forward_helper(secret_tensor, is_unittest= True)
+        return concat_tensor_a, concat_tensor_b, concat_final
 
+    def cover_hide(self, cover_images: torch.Tensor, secret_tensor: torch.Tensor):
+        prepped_secrets = self.net_prep(secret_tensor)
+        prepped_data = torch.cat((prepped_secrets, cover_images), 1)
+        x3_a, x4_a, x5_a, concat_tensor_a, x3_b, x4_b, x5_b, concat_tensor_b, x3_c, x4_c, x5_c, concat_tensor_c, tensor_final, tensor_noise = self.net_hide.forward_helper(prepped_data, is_unittest= True)
 
-
-
+        return concat_tensor_a, concat_tensor_b, concat_tensor_c, tensor_noise
 
 
 class DetectNetwork(nn.Module):

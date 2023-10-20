@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import time
 from models import *
-import utils
+from utils import utils
 import dataset_loader
 import numpy as np
 import wandb
@@ -34,7 +34,8 @@ class TrainerDetector(TrainerBase):
                  SAVE_EPOCH_PROGRESS,
                  SAVE_PROGRESS_EVERY_10000_BATCHES,
                  SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES,
-                 device) -> None:
+                 device,
+                 WANDB_VAR) -> None:
         
         self.LEARNING_RATE = LEARNING_RATE # 0.001
         self.BATCH_SIZE = BATCH_SIZE # lower to reduce memory usage
@@ -50,6 +51,7 @@ class TrainerDetector(TrainerBase):
         self.SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES = SKIP_WANDB_SAVE_IMAGE_OF_FIRST_FEW_BATCHES # True to skip saving image showing early learning progress
 
         self.device = device # GPU device to use
+        self.WANDB_VAR = WANDB_VAR
 
 
     def train(self):
@@ -67,6 +69,8 @@ class TrainerDetector(TrainerBase):
         val_dataloader = dataset_loader.DatasetLoader.get_val_dataloader(val_dir, self.BATCH_SIZE, self.NUM_CPU, self.NORMALIZE)
         test_dataloader = dataset_loader.DatasetLoader.get_test_dataloader(test_dir, self.BATCH_SIZE, 1, self.NORMALIZE)
         self.img_cover, self.img_secret = utils.get_single_batch_into_image(test_dataloader)
+        utils.img_cover = self.img_cover
+        utils.img_secret = self.img_secret
 
 
         my_custom_loss = nn.BCELoss() # Replace with Binary Cross Entropy for detector loss function
