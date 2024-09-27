@@ -118,10 +118,14 @@ class DatasetBuilder:
         print("Move Complete.")
     
 
+if __name__ == "__main__":
+    # ds_builder = DatasetBuilder(image_name_file="valtemp.txt", train_dir="temptrain", 
+    #                             val_dir="tempval", test_dir="temptest")
 
-# ds_builder = DatasetBuilder(image_name_file="valtemp.txt", train_dir="temptrain", 
-#                             val_dir="tempval", test_dir="temptest")
-# ds_builder = DatasetBuilder()
-# ds_builder.build_dataset()
+    # These parameters assumes using images from val.zip from Kaggle ImageNet Object Localization Challenge.
+    # val.txt provides list of file names that gets split.
+    ds_builder = DatasetBuilder(data_path = "data/", image_name_file = "val.txt" , train_dir = "train", 
+                                val_dir = "val", test_dir = "test")
+    ds_builder.build_dataset()
 
-# print("Move complete.")
+    print("Move complete.")

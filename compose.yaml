@@ -1,0 +1,21 @@
+services:
+  ml_project:
+    container_name: ml_stega_project
+    build: .
+    runtime: nvidia  
+    shm_size: '16gb'  
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0  # or device number (e.g. 0) to allow a single gpu
+    ports:
+      - "60000:9092"  # port for access
+    volumes:
+      - type: bind
+        source: /mnt/scratch/zangoos/ml_project/Deep_Learning_Image_Steganography
+        target: /Major_Project/Deep_Learning_Image_Steganography
+      - type: bind
+        source: /mnt/scratch/zangoos/imagenet/ILSVRC/Data/DET
+        target: /Major_Project/data
+
+    # volumes:
+    #   - .:/Major_Project/Deep_Learning_Image_Steganography
+    #   - ../imagenet/ILSVRC/Data/DET:/Major_Project/data
